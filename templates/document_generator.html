@@ -1,0 +1,548 @@
+{% extends "base.html" %}
+
+{% block title %}문서 생성기 - ProcureMate GUI{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="fas fa-file-alt"></i> 
+                한국 기업 구매-조달 문서 생성기
+            </h2>
+            <p class="text-muted">9가지 핵심 조달 문서를 자동으로 생성합니다.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 문서 타입 선택 -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 문서 타입 선택</h5>
+                </div>
+                <div class="card-body">
+                    <div id="DocumentTypeList" class="list-group">
+                        <div class="text-center">
+                            <div class="loading-spinner"></div>
+                            문서 타입 로딩 중...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 문서 입력 폼 -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📝 문서 정보 입력</h5>
+                    <button id="GenerateButton" class="btn btn-primary btn-sm" disabled>
+                        <i class="fas fa-magic"></i> 문서 생성
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="DocumentFormContainer">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                            <p>좌측에서 문서 타입을 선택해주세요</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 생성 결과 -->
+    <div class="row mt-4" id="ResultSection" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📄 생성된 문서</h5>
+                    <div>
+                        <button id="CopyButton" class="btn btn-outline-secondary btn-sm me-2">
+                            <i class="fas fa-copy"></i> 복사
+                        </button>
+                        <button id="DownloadButton" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-download"></i> 다운로드
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="GeneratedContent">
+                        <!-- 생성된 문서 내용이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 진행상황 모달 -->
+<div class="modal fade" id="ProgressModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="loading-spinner mb-3"></div>
+                <h5>문서 생성 중...</h5>
+                <p class="text-muted">AI가 문서를 작성하고 있습니다. 잠시만 기다려주세요.</p>
+                <div class="progress mt-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+class DocumentGenerator {
+    constructor() {
+        this.selectedDocumentType = null;
+        this.documentTypes = [];
+        this.currentFormData = {};
+        this.init();
+    }
+
+    async init() {
+        await this.loadDocumentTypes();
+        this.setupEventListeners();
+    }
+
+    async loadDocumentTypes() {
+        try {
+            const response = await fetch('/api/documents/types');
+            const result = await response.json();
+            
+            if (result.success) {
+                this.documentTypes = result.data;
+                this.renderDocumentTypeList();
+            } else {
+                this.showError('문서 타입 로딩 실패');
+            }
+        } catch (error) {
+            console.error('문서 타입 로딩 오류:', error);
+            this.showError('서버 연결 오류');
+        }
+    }
+
+    renderDocumentTypeList() {
+        const container = document.getElementById('DocumentTypeList');
+        
+        if (this.documentTypes.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center">사용 가능한 문서 타입이 없습니다</div>';
+            return;
+        }
+
+        const listItems = this.documentTypes.map(type => `
+            <button class="list-group-item list-group-item-action DocumentTypeItem" 
+                    data-type="${type.id}">
+                <div class="d-flex w-100 justify-content-between">
+                    <h6 class="mb-1">${type.name}</h6>
+                    <small class="text-muted">${type.category}</small>
+                </div>
+                <p class="mb-1 text-muted small">${type.description}</p>
+            </button>
+        `).join('');
+
+        container.innerHTML = listItems;
+    }
+
+    setupEventListeners() {
+        // 문서 타입 선택
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.DocumentTypeItem')) {
+                const button = e.target.closest('.DocumentTypeItem');
+                const documentType = button.dataset.type;
+                this.selectDocumentType(documentType);
+            }
+        });
+
+        // 문서 생성 버튼
+        document.getElementById('GenerateButton').addEventListener('click', () => {
+            this.generateDocument();
+        });
+
+        // 복사 버튼
+        document.getElementById('CopyButton').addEventListener('click', () => {
+            this.copyToClipboard();
+        });
+
+        // 다운로드 버튼
+        document.getElementById('DownloadButton').addEventListener('click', () => {
+            this.downloadDocument();
+        });
+    }
+
+    async selectDocumentType(documentType) {
+        // 이전 선택 제거
+        document.querySelectorAll('.DocumentTypeItem').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // 새 선택 적용
+        document.querySelector(`[data-type="${documentType}"]`).classList.add('active');
+        
+        this.selectedDocumentType = documentType;
+
+        // 폼 필드 로딩
+        await this.loadFormFields(documentType);
+    }
+
+    async loadFormFields(documentType) {
+        try {
+            const response = await fetch(`/api/documents/${documentType}/fields`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.renderFormFields(result.data);
+                document.getElementById('GenerateButton').disabled = false;
+            } else {
+                this.showError('폼 필드 로딩 실패');
+            }
+        } catch (error) {
+            console.error('폼 필드 로딩 오류:', error);
+            this.showError('서버 연결 오류');
+        }
+    }
+
+    renderFormFields(fields) {
+        const container = document.getElementById('DocumentFormContainer');
+        
+        const formHTML = fields.map(field => {
+            const fieldId = `field_${field.name}`;
+            const required = field.required ? 'required' : '';
+            const placeholder = field.placeholder ? `placeholder="${field.placeholder}"` : '';
+
+            switch (field.field_type) {
+                case 'textarea':
+                    return `
+                        <div class="mb-3">
+                            <label for="${fieldId}" class="form-label">
+                                ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                            </label>
+                            <textarea class="form-control FormField" 
+                                      id="${fieldId}" 
+                                      name="${field.name}"
+                                      rows="3" 
+                                      ${placeholder} 
+                                      ${required}></textarea>
+                        </div>
+                    `;
+                case 'select':
+                    const options = field.options ? field.options.map(opt => 
+                        `<option value="${opt}">${opt}</option>`
+                    ).join('') : '';
+                    return `
+                        <div class="mb-3">
+                            <label for="${fieldId}" class="form-label">
+                                ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                            </label>
+                            <select class="form-select FormField" 
+                                    id="${fieldId}" 
+                                    name="${field.name}" 
+                                    ${required}>
+                                <option value="">선택해주세요</option>
+                                ${options}
+                            </select>
+                        </div>
+                    `;
+                case 'number':
+                    return `
+                        <div class="mb-3">
+                            <label for="${fieldId}" class="form-label">
+                                ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                            </label>
+                            <input type="number" 
+                                   class="form-control FormField" 
+                                   id="${fieldId}" 
+                                   name="${field.name}"
+                                   ${placeholder} 
+                                   ${required}>
+                        </div>
+                    `;
+                case 'date':
+                    return `
+                        <div class="mb-3">
+                            <label for="${fieldId}" class="form-label">
+                                ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                            </label>
+                            <input type="date" 
+                                   class="form-control FormField" 
+                                   id="${fieldId}" 
+                                   name="${field.name}"
+                                   ${required}>
+                        </div>
+                    `;
+                default: // text
+                    return `
+                        <div class="mb-3">
+                            <label for="${fieldId}" class="form-label">
+                                ${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}
+                            </label>
+                            <input type="text" 
+                                   class="form-control FormField" 
+                                   id="${fieldId}" 
+                                   name="${field.name}"
+                                   ${placeholder} 
+                                   ${required}>
+                        </div>
+                    `;
+            }
+        }).join('');
+
+        container.innerHTML = `
+            <form id="DocumentForm">
+                ${formHTML}
+            </form>
+        `;
+    }
+
+    collectFormData() {
+        const formData = {};
+        document.querySelectorAll('.FormField').forEach(field => {
+            const value = field.value.trim();
+            if (value) {
+                // 숫자 필드는 숫자로 변환
+                if (field.type === 'number') {
+                    formData[field.name] = parseFloat(value);
+                } else {
+                    formData[field.name] = value;
+                }
+            }
+        });
+        return formData;
+    }
+
+    async generateDocument() {
+        if (!this.selectedDocumentType) {
+            this.showError('문서 타입을 선택해주세요');
+            return;
+        }
+
+        const formData = this.collectFormData();
+        
+        // 필수 필드 검증
+        const requiredFields = document.querySelectorAll('.FormField[required]');
+        let hasError = false;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                hasError = true;
+            } else {
+                field.classList.remove('is-invalid');
+            }
+        });
+
+        if (hasError) {
+            this.showError('필수 필드를 모두 입력해주세요');
+            return;
+        }
+
+        // 진행 모달 표시
+        const modal = new bootstrap.Modal(document.getElementById('ProgressModal'));
+        modal.show();
+
+        try {
+            const response = await fetch('/api/documents/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    document_type: this.selectedDocumentType,
+                    form_data: formData
+                })
+            });
+
+            const result = await response.json();
+            modal.hide();
+
+            if (result.success) {
+                this.displayGeneratedDocument(result.data);
+            } else {
+                this.showError('문서 생성 실패: ' + (result.error || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            modal.hide();
+            console.error('문서 생성 오류:', error);
+            this.showError('서버 연결 오류');
+        }
+    }
+
+    displayGeneratedDocument(documentData) {
+        const content = documentData.generated_content || '생성된 내용이 없습니다';
+        
+        // 마크다운을 HTML로 변환 (기본적인 변환)
+        const htmlContent = this.markdownToHtml(content);
+        
+        document.getElementById('GeneratedContent').innerHTML = `
+            <div class="generated-document">
+                ${htmlContent}
+            </div>
+            <hr>
+            <div class="document-metadata">
+                <h6>문서 정보</h6>
+                <ul class="list-unstyled small text-muted">
+                    <li><strong>문서 타입:</strong> ${documentData.template_name}</li>
+                    <li><strong>생성 시간:</strong> ${new Date(documentData.timestamp).toLocaleString('ko-KR')}</li>
+                    <li><strong>출력 형식:</strong> ${documentData.output_formats?.join(', ') || 'PDF'}</li>
+                    <li><strong>상태:</strong> ${documentData.status === 'success' ? '✅ 성공' : '❌ 실패'}</li>
+                </ul>
+            </div>
+        `;
+
+        // 결과 섹션 표시
+        document.getElementById('ResultSection').style.display = 'block';
+        
+        // 결과 섹션으로 스크롤
+        document.getElementById('ResultSection').scrollIntoView({ 
+            behavior: 'smooth' 
+        });
+
+        this.currentFormData = documentData;
+    }
+
+    markdownToHtml(markdown) {
+        return markdown
+            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+            .replace(/^\*\*(.*)\*\*/gm, '<strong>$1</strong>')
+            .replace(/^\* (.*$)/gm, '<li>$1</li>')
+            .replace(/^- (.*$)/gm, '<li>$1</li>')
+            .replace(/\n\n/g, '</p><p>')
+            .replace(/^(.+)$/gm, '<p>$1</p>')
+            .replace(/<p><li>/g, '<ul><li>')
+            .replace(/<\/li><\/p>/g, '</li></ul>');
+    }
+
+    copyToClipboard() {
+        const content = document.getElementById('GeneratedContent').innerText;
+        navigator.clipboard.writeText(content).then(() => {
+            // 성공 피드백
+            const button = document.getElementById('CopyButton');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check"></i> 복사됨';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        });
+    }
+
+    downloadDocument() {
+        if (!this.currentFormData) return;
+        
+        const content = this.currentFormData.generated_content || '';
+        const filename = `${this.selectedDocumentType}_${new Date().toISOString().slice(0,10)}.txt`;
+        
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
+
+    showError(message) {
+        // 간단한 알림 표시
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.container-fluid').insertBefore(
+            alertDiv, 
+            document.querySelector('.container-fluid').firstChild
+        );
+        
+        // 5초 후 자동 제거
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    new DocumentGenerator();
+});
+</script>
+
+<style>
+.DocumentTypeItem.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.DocumentTypeItem:hover {
+    background-color: #f8f9fa;
+}
+
+.DocumentTypeItem.active:hover {
+    background-color: #0056b3;
+}
+
+.generated-document {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.generated-document h1,
+.generated-document h2,
+.generated-document h3 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.generated-document h1 {
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.3rem;
+}
+
+.generated-document h2 {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.2rem;
+}
+
+.generated-document ul {
+    margin: 0.5rem 0;
+    padding-left: 2rem;
+}
+
+.generated-document li {
+    margin: 0.2rem 0;
+}
+
+.FormField.is-invalid {
+    border-color: #dc3545;
+}
+
+.document-metadata {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}

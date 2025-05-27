@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ProcureMate GUI{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 커스텀 CSS -->
+    <link href="/static/css/main.css" rel="stylesheet">
+    
+    <style>
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-online { background-color: #28a745; }
+        .status-offline { background-color: #dc3545; }
+        .status-pending { background-color: #ffc107; }
+        
+        .metric-card {
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .test-result {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin-bottom: 15px;
+        }
+        .test-result.success { border-left-color: #28a745; }
+        .test-result.error { border-left-color: #dc3545; }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #007bff;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <strong>ProcureMate</strong> <small>GUI</small>
+            </a>
+            
+            <div class="navbar-nav">
+                <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">대시보드</a>
+                <a class="nav-link {% if 'llm-test' in request.url.path %}active{% endif %}" href="/llm-test">LLM 테스트</a>
+                <a class="nav-link {% if 'rag-analysis' in request.url.path %}active{% endif %}" href="/rag-analysis">RAG 분석</a>
+                <a class="nav-link {% if 'workflow' in request.url.path %}active{% endif %}" href="/workflow">워크플로우</a>
+                <a class="nav-link {% if 'g2b-test' in request.url.path %}active{% endif %}" href="/g2b-test">G2B 테스트</a>
+                <a class="nav-link {% if 'coupang-test' in request.url.path %}active{% endif %}" href="/coupang-test">쿠팡 테스트</a>
+                <a class="nav-link {% if 'document-generator' in request.url.path %}active{% endif %}" href="/document-generator">문서생성</a>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <span class="status-indicator" id="ConnectionStatus"></span>
+                <small class="text-light" id="StatusText">연결 확인 중...</small>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 커스텀 JS -->
+    <script src="/static/js/main.js"></script>
+    
+    <script>
+        // WebSocket 연결 및 실시간 업데이트
+        let ws = null;
+        
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket(`ws://${window.location.host}/ws`);
+                
+                ws.onopen = function() {
+                    updateConnectionStatus(true);
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+                
+                ws.onclose = function() {
+                    updateConnectionStatus(false);
+                    // 재연결 시도
+                    setTimeout(connectWebSocket, 5000);
+                };
+                
+                ws.onerror = function() {
+                    updateConnectionStatus(false);
+                };
+            } catch (e) {
+                updateConnectionStatus(false);
+            }
+        }
+        
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('ConnectionStatus');
+            const statusText = document.getElementById('StatusText');
+            
+            if (connected) {
+                indicator.className = 'status-indicator status-online';
+                statusText.textContent = '연결됨';
+            } else {
+                indicator.className = 'status-indicator status-offline';
+                statusText.textContent = '연결 끊김';
+            }
+        }
+        
+        function handleWebSocketMessage(data) {
+            if (data.type === 'status_update') {
+                updateSystemStatus(data.data);
+            } else if (data.type === 'test_update') {
+                updateTestResults(data.data);
+            }
+        }
+        
+        // 페이지 로드시 WebSocket 연결
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

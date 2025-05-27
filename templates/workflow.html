@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+
+{% block title %}워크플로우 테스트 - ProcureMate GUI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>전체 워크플로우 테스트</h1>
+        <p class="text-muted">LLM → 데이터 수집 → RAG → 문서 생성의 전체 프로세스를 테스트합니다</p>
+    </div>
+</div>
+
+<!-- 워크플로우 입력 -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">워크플로우 실행</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <label class="form-label">조달 요청</label>
+                        <textarea class="form-control" id="WorkflowInput" rows="3"
+                                  placeholder="전체 워크플로우를 테스트할 조달 요청을 입력하세요">회의실용 테이블 5개와 의자 20개가 필요합니다. 예산은 500만원 정도이고, 다음 달까지 납품되어야 합니다.</textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button class="btn btn-success btn-lg" onclick="runFullWorkflow()">
+                                <span id="WorkflowButtonText">🚀 전체 워크플로우 실행</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>빠른 테스트 시나리오:</h6>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadScenario('office')">사무용품</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadScenario('meeting')">회의실</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadScenario('it')">IT 장비</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadScenario('furniture')">가구</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 진행 상황 표시 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">실행 진행 상황</h5>
+            </div>
+            <div class="card-body">
+                <div id="WorkflowProgress">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="workflow-step" id="Step1">
+                                    <div class="step-icon">1</div>
+                                    <h6>LLM 분석</h6>
+                                    <div class="step-status">대기</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="workflow-step" id="Step2">
+                                    <div class="step-icon">2</div>
+                                    <h6>데이터 수집</h6>
+                                    <div class="step-status">대기</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="workflow-step" id="Step3">
+                                    <div class="step-icon">3</div>
+                                    <h6>RAG 검색</h6>
+                                    <div class="step-status">대기</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <div class="workflow-step" id="Step4">
+                                    <div class="step-icon">4</div>
+                                    <h6>문서 생성</h6>
+                                    <div class="step-status">대기</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 단계별 결과 -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">1단계: LLM 분석 결과</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="LlmResults">
+                    <p class="text-muted">워크플로우를 실행하면 결과가 표시됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">2단계: 데이터 수집 결과</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="DataResults">
+                    <p class="text-muted">대기 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">3단계: RAG 검색 결과</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="RagResults">
+                    <p class="text-muted">대기 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">4단계: 문서 생성 결과</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="DocumentResults">
+                    <p class="text-muted">대기 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 전체 성능 요약 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">성능 요약 & 차트</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div id="PerformanceSummary">
+                            <p class="text-muted">대기 중...</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <canvas id="WorkflowChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 원본 결과 데이터 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">전체 결과 데이터</h5>
+            </div>
+            <div class="card-body">
+                <div id="RawWorkflowData" style="display: none;">
+                    <pre id="WorkflowJson" class="bg-light p-3" style="max-height: 400px; overflow-y: auto;"></pre>
+                </div>
+                <button class="btn btn-outline-secondary" onclick="toggleRawData()">
+                    원본 데이터 보기/숨기기
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.workflow-step {
+    padding: 20px;
+    border-radius: 10px;
+    margin: 10px 0;
+    transition: all 0.3s ease;
+}
+
+.step-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.workflow-step.waiting {
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+}
+
+.workflow-step.running {
+    background-color: #fff3cd;
+    border: 2px solid #ffc107;
+}
+
+.workflow-step.running .step-icon {
+    background-color: #ffc107;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+.workflow-step.completed {
+    background-color: #d1eddc;
+    border: 2px solid #28a745;
+}
+
+.workflow-step.completed .step-icon {
+    background-color: #28a745;
+    color: white;
+}
+
+.workflow-step.error {
+    background-color: #f8d7da;
+    border: 2px solid #dc3545;
+}
+
+.workflow-step.error .step-icon {
+    background-color: #dc3545;
+    color: white;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.step-status {
+    font-size: 14px;
+    font-weight: 500;
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let workflowChart = null;
+    let currentWorkflowData = null;
+    
+    // 안전한 숫자 변환 헬퍼 함수
+    function safeNumber(value, defaultValue = 0) {
+        return (typeof value === 'number' && !isNaN(value)) ? value : defaultValue;
+    }
+    
+    // 안전한 toFixed 헬퍼 함수
+    function safeToFixed(value, digits = 2, defaultValue = '0.00') {
+        const num = safeNumber(value);
+        return num.toFixed(digits);
+    }
+    
+    // 전체 워크플로우 실행
+    async function runFullWorkflow() {
+        const query = document.getElementById('WorkflowInput').value;
+        if (!query.trim()) {
+            alert('조달 요청을 입력해주세요.');
+            return;
+        }
+        
+        // UI 초기화
+        resetWorkflowUI();
+        setWorkflowState(true);
+        
+        try {
+            const response = await fetch('/api/workflow/test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({query: query})
+            });
+            
+            const result = await response.json();
+            currentWorkflowData = result;
+            
+            if (result.success) {
+                displayWorkflowResults(result);
+            } else {
+                displayWorkflowError(result);
+            }
+            
+        } catch (error) {
+            console.error('워크플로우 실행 오류:', error);
+            displayWorkflowError({error: error.message});
+        } finally {
+            setWorkflowState(false);
+        }
+    }
+    
+    // 워크플로우 결과 표시
+    function displayWorkflowResults(result) {
+        const workflowResults = result.workflow_results || {};
+        const metrics = result.metrics || {};
+        
+        // 각 단계 결과 표시
+        if (workflowResults.llm_analysis) {
+            updateStepStatus(1, 'completed');
+            displayLlmResults(workflowResults.llm_analysis);
+        }
+        
+        if (workflowResults.data_collection) {
+            updateStepStatus(2, 'completed');
+            displayDataResults(workflowResults.data_collection);
+        }
+        
+        if (workflowResults.rag_search) {
+            updateStepStatus(3, 'completed');
+            displayRagResults(workflowResults.rag_search);
+        }
+        
+        if (workflowResults.document_generation) {
+            updateStepStatus(4, 'completed');
+            displayDocumentResults(workflowResults.document_generation);
+        }
+        
+        // 성능 요약 표시
+        displayPerformanceSummary(metrics, workflowResults);
+        
+        // 차트 업데이트
+        updateWorkflowChart(metrics, workflowResults);
+        
+        // 원본 데이터 저장
+        document.getElementById('WorkflowJson').textContent = JSON.stringify(result, null, 2);
+    }
+    
+    // LLM 분석 결과 표시
+    function displayLlmResults(llmData) {
+        const div = document.getElementById('LlmResults');
+        const analysis = llmData.result || {};
+        const duration = safeNumber(llmData.duration);
+        
+        div.innerHTML = `
+            <div class="mb-3">
+                <h6>분석 완료 (${safeToFixed(duration)}초)</h6>
+            </div>
+            
+            <div class="mb-2">
+                <strong>추출된 물품:</strong>
+                <ul class="list-unstyled ms-3">
+                    ${analysis.items && analysis.items.length > 0 ? 
+                      analysis.items.map(item => `<li>• ${item}</li>`).join('') : 
+                      '<li>• 없음</li>'}
+                </ul>
+            </div>
+            
+            <div class="mb-2">
+                <strong>수량:</strong>
+                ${analysis.quantities && analysis.quantities.length > 0 ? analysis.quantities.join(', ') : '미정'}
+            </div>
+            
+            <div class="mb-2">
+                <strong>예산 범위:</strong> ${analysis.budget_range || '미정'}
+            </div>
+            
+            <div class="mb-2">
+                <strong>긴급도:</strong> ${analysis.urgency || '보통'}
+            </div>
+            
+            <div class="mb-2">
+                <strong>특별 요구사항:</strong> 
+                ${analysis.specifications && analysis.specifications.length > 0 ? 
+                  analysis.specifications.join(', ') : '없음'}
+            </div>
+        `;
+    }
+    
+    // 데이터 수집 결과 표시
+    function displayDataResults(dataCollection) {
+        const div = document.getElementById('DataResults');
+        const searchResults = dataCollection.result || {};
+        const duration = safeNumber(dataCollection.duration);
+        
+        let resultsHtml = `
+            <div class="mb-3">
+                <h6>데이터 수집 완료 (${safeToFixed(duration)}초)</h6>
+            </div>
+        `;
+        
+        const resultCount = Object.keys(searchResults).length;
+        if (resultCount === 0) {
+            resultsHtml += '<p class="text-muted">수집된 데이터가 없습니다.</p>';
+        } else {
+            for (const [item, platforms] of Object.entries(searchResults)) {
+                resultsHtml += `
+                    <div class="mb-3">
+                        <strong>"${item}" 검색 결과:</strong>
+                        <div class="ms-3">
+                `;
+                
+                for (const [platform, products] of Object.entries(platforms || {})) {
+                    const productList = Array.isArray(products) ? products : [];
+                    resultsHtml += `
+                        <div class="mb-2">
+                            <span class="badge bg-secondary">${platform}</span>
+                            <small>(${productList.length}개 상품)</small>
+                            <ul class="list-unstyled ms-3 mt-1">
+                    `;
+                    
+                    productList.slice(0, 2).forEach(product => {
+                        const name = product.name || product.title || '상품명 없음';
+                        const price = product.price ? ` - ${product.price}` : '';
+                        resultsHtml += `<li class="small">• ${name}${price}</li>`;
+                    });
+                    
+                    if (productList.length > 2) {
+                        resultsHtml += `<li class="small text-muted">... 외 ${productList.length - 2}개</li>`;
+                    }
+                    
+                    resultsHtml += '</ul></div>';
+                }
+                
+                resultsHtml += '</div></div>';
+            }
+        }
+        
+        div.innerHTML = resultsHtml;
+    }
+    
+    // RAG 검색 결과 표시
+    function displayRagResults(ragData) {
+        const div = document.getElementById('RagResults');
+        const ragResult = ragData.result || {};
+        const duration = safeNumber(ragData.duration);
+        const similarProducts = ragResult.similar_products || [];
+        const similarCases = ragResult.similar_cases || [];
+        
+        div.innerHTML = `
+            <div class="mb-3">
+                <h6>RAG 검색 완료 (${safeToFixed(duration)}초)</h6>
+            </div>
+            
+            <div class="mb-3">
+                <strong>유사 상품 (${similarProducts.length}개):</strong>
+                <ul class="list-unstyled ms-3">
+                    ${similarProducts.length === 0 ? 
+                      '<li class="small text-muted">유사 상품이 없습니다.</li>' :
+                      similarProducts.slice(0, 3).map(product => {
+                        const content = product.document || product.content || '내용 없음';
+                        const similarity = product.distance ? 
+                          safeToFixed(1 - product.distance) : 'N/A';
+                        return `
+                          <li class="small">
+                            • ${content.substring(0, 100)}...
+                            <span class="badge bg-primary ms-2">
+                              유사도: ${similarity}
+                            </span>
+                          </li>
+                        `;
+                      }).join('')
+                    }
+                </ul>
+            </div>
+            
+            <div class="mb-3">
+                <strong>유사 조달 사례 (${similarCases.length}개):</strong>
+                <ul class="list-unstyled ms-3">
+                    ${similarCases.length === 0 ?
+                      '<li class="small text-muted">유사 조달 사례가 없습니다.</li>' :
+                      similarCases.slice(0, 2).map(case_ => {
+                        const content = case_.document || case_.content || '내용 없음';
+                        return `<li class="small">• ${content.substring(0, 100)}...</li>`;
+                      }).join('')
+                    }
+                </ul>
+            </div>
+        `;
+    }
+    
+    // 문서 생성 결과 표시
+    function displayDocumentResults(docData) {
+        const div = document.getElementById('DocumentResults');
+        const documents = docData.result || {};
+        const duration = safeNumber(docData.duration);
+        
+        div.innerHTML = `
+            <div class="mb-3">
+                <h6>문서 생성 완료 (${safeToFixed(duration)}초)</h6>
+            </div>
+            
+            <div class="mb-3">
+                <strong>생성된 문서들:</strong>
+                <ul class="list-unstyled ms-3">
+                    ${Object.keys(documents).length === 0 ? 
+                      '<li class="text-muted">생성된 문서가 없습니다.</li>' :
+                      Object.entries(documents).map(([docType, docData]) => {
+                        const preview = docData && docData.content ? 
+                          docData.content.toString().substring(0, 200) + '...' : 
+                          '내용 미리보기 없음';
+                        return `
+                          <li class="mb-2">
+                            <span class="badge bg-success">${docType}</span>
+                            <div class="small mt-1">${preview}</div>
+                          </li>
+                        `;
+                      }).join('')
+                    }
+                </ul>
+            </div>
+        `;
+    }
+    
+    // 성능 요약 표시
+    function displayPerformanceSummary(metrics, workflowResults) {
+        const div = document.getElementById('PerformanceSummary');
+        const totalTime = safeNumber(metrics.response_time || metrics.total_time);
+        const additionalMetrics = metrics.additional_metrics || {};
+        const successStages = safeNumber(additionalMetrics.success_stages, 0);
+        
+        // 각 단계별 시간 추출
+        const llmTime = safeNumber(workflowResults.llm_analysis?.duration || additionalMetrics.llm_analysis);
+        const dataTime = safeNumber(workflowResults.data_collection?.duration || additionalMetrics.data_collection);
+        const ragTime = safeNumber(workflowResults.rag_search?.duration || additionalMetrics.rag_search);
+        const docTime = safeNumber(workflowResults.document_generation?.duration || additionalMetrics.document_generation);
+        
+        div.innerHTML = `
+            <h6>전체 성능 요약</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><strong>총 실행 시간:</strong> ${safeToFixed(totalTime)}초</li>
+                        <li><strong>성공한 단계:</strong> ${successStages}/4</li>
+                        <li><strong>LLM 분석:</strong> ${safeToFixed(llmTime)}초</li>
+                        <li><strong>데이터 수집:</strong> ${safeToFixed(dataTime)}초</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-unstyled">
+                        <li><strong>RAG 검색:</strong> ${safeToFixed(ragTime)}초</li>
+                        <li><strong>문서 생성:</strong> ${safeToFixed(docTime)}초</li>
+                        <li><strong>평균 단계 시간:</strong> ${safeToFixed(totalTime / 4)}초</li>
+                        <li><strong>전체 성공률:</strong> ${safeToFixed((successStages / 4) * 100, 1)}%</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 워크플로우 차트 업데이트
+    function updateWorkflowChart(metrics, workflowResults) {
+        const additionalMetrics = metrics.additional_metrics || {};
+        
+        const data = [
+            safeNumber(workflowResults.llm_analysis?.duration || additionalMetrics.llm_analysis),
+            safeNumber(workflowResults.data_collection?.duration || additionalMetrics.data_collection),
+            safeNumber(workflowResults.rag_search?.duration || additionalMetrics.rag_search),
+            safeNumber(workflowResults.document_generation?.duration || additionalMetrics.document_generation)
+        ];
+        
+        if (!workflowChart) {
+            const ctx = document.getElementById('WorkflowChart').getContext('2d');
+            workflowChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['LLM 분석', '데이터 수집', 'RAG 검색', '문서 생성'],
+                    datasets: [{
+                        label: '실행 시간 (초)',
+                        data: data,
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(255, 205, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgb(54, 162, 235)',
+                            'rgb(255, 99, 132)',
+                            'rgb(255, 205, 86)',
+                            'rgb(75, 192, 192)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '시간 (초)'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            workflowChart.data.datasets[0].data = data;
+            workflowChart.update();
+        }
+    }
+    
+    // 단계 상태 업데이트
+    function updateStepStatus(stepNum, status) {
+        const step = document.getElementById(`Step${stepNum}`);
+        step.className = `workflow-step ${status}`;
+        
+        const statusText = step.querySelector('.step-status');
+        const statusTexts = {
+            waiting: '대기',
+            running: '실행 중...',
+            completed: '완료',
+            error: '오류'
+        };
+        statusText.textContent = statusTexts[status] || '알 수 없음';
+    }
+    
+    // 워크플로우 UI 상태 설정
+    function setWorkflowState(running) {
+        const button = document.querySelector('#WorkflowButtonText');
+        if (running) {
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>워크플로우 실행 중...';
+        } else {
+            button.textContent = '🚀 전체 워크플로우 실행';
+        }
+    }
+    
+    // 워크플로우 UI 초기화
+    function resetWorkflowUI() {
+        // 모든 단계 초기화
+        for (let i = 1; i <= 4; i++) {
+            updateStepStatus(i, 'waiting');
+        }
+        
+        // 결과 영역 초기화
+        document.getElementById('LlmResults').innerHTML = '<p class="text-muted">실행 중...</p>';
+        document.getElementById('DataResults').innerHTML = '<p class="text-muted">대기 중...</p>';
+        document.getElementById('RagResults').innerHTML = '<p class="text-muted">대기 중...</p>';
+        document.getElementById('DocumentResults').innerHTML = '<p class="text-muted">대기 중...</p>';
+        document.getElementById('PerformanceSummary').innerHTML = '<p class="text-muted">대기 중...</p>';
+    }
+    
+    // 워크플로우 오류 표시
+    function displayWorkflowError(result) {
+        // 실패한 단계들을 오류로 표시
+        for (let i = 1; i <= 4; i++) {
+            updateStepStatus(i, 'error');
+        }
+        
+        const errorHtml = `
+            <div class="alert alert-danger">
+                <h6>워크플로우 실행 실패</h6>
+                <p>${result.error || '알 수 없는 오류가 발생했습니다.'}</p>
+                ${result.partial_results ? '<p>일부 결과는 완료되었습니다.</p>' : ''}
+            </div>
+        `;
+        
+        document.getElementById('LlmResults').innerHTML = errorHtml;
+    }
+    
+    // 시나리오 로드
+    function loadScenario(scenario) {
+        const scenarios = {
+            office: '사무용 의자 10개와 책상 5개가 필요합니다. 예산은 300만원이고, 2주 내 배송 희망합니다.',
+            meeting: '회의실용 테이블 2개와 의자 16개가 필요합니다. 고급 재질로 500만원 예산입니다.',
+            it: '노트북 20대와 모니터 20개, 키보드 마우스 세트가 필요합니다. 1000만원 예산으로 급히 필요합니다.',
+            furniture: '사무실 리모델링을 위한 책상 15개, 의자 15개, 파티션 10개가 필요합니다. 예산 800만원입니다.'
+        };
+        
+        document.getElementById('WorkflowInput').value = scenarios[scenario] || '';
+    }
+    
+    // 원본 데이터 토글
+    function toggleRawData() {
+        const rawDiv = document.getElementById('RawWorkflowData');
+        rawDiv.style.display = rawDiv.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    // 엔터키로 워크플로우 실행
+    document.getElementById('WorkflowInput').addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            runFullWorkflow();
+        }
+    });
+</script>
+{% endblock %}

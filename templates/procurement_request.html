@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>조달 요청서</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .title { font-size: 24px; font-weight: bold; }
+        .content { margin: 20px 0; }
+        .item-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .item-table th, .item-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .item-table th { background-color: #f2f2f2; }
+        .footer { margin-top: 50px; text-align: right; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">조달 요청서</div>
+        <div>작성일: {{ created_date }}</div>
+    </div>
+    
+    <div class="content">
+        <h3>요청 개요</h3>
+        <p><strong>요청자:</strong> {{ requester }}</p>
+        <p><strong>요청 내용:</strong> {{ request_description }}</p>
+        <p><strong>긴급도:</strong> {{ urgency }}</p>
+        <p><strong>예산 범위:</strong> {{ budget_range }}</p>
+        
+        <h3>요청 물품 목록</h3>
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th>물품명</th>
+                    <th>수량</th>
+                    <th>예상 단가</th>
+                    <th>예상 총액</th>
+                    <th>비고</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit_price }}</td>
+                    <td>{{ item.total_price }}</td>
+                    <td>{{ item.notes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if recommendations %}
+        <h3>추천 업체 정보</h3>
+        {% for rec in recommendations %}
+        <div style="margin: 10px 0; padding: 10px; border: 1px solid #eee;">
+            <strong>{{ rec.platform }}</strong> - {{ rec.vendor }}<br>
+            상품명: {{ rec.name }}<br>
+            가격: {{ rec.price }}원<br>
+            평점: {{ rec.rating }} (리뷰 {{ rec.review_count }}개)
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+    
+    <div class="footer">
+        <p>ProcureMate 시스템에서 자동 생성됨</p>
+    </div>
+</body>
+</html>
+        

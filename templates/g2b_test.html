@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}G2B 테스트 - ProcureMate{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>나라장터(G2B) API 테스트</h1>
+        <p class="text-muted">G2B 입찰공고, 계약정보, 가격정보 조회 테스트</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>입찰공고 검색</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">검색어</label>
+                    <input type="text" class="form-control" id="BidSearchQuery" value="사무용품">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">조회건수</label>
+                    <select class="form-control" id="BidSearchLimit">
+                        <option value="10">10건</option>
+                        <option value="20">20건</option>
+                        <option value="50">50건</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="searchBidAnnouncements()">입찰공고 검색</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>계약정보 조회</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">계약방법</label>
+                    <select class="form-control" id="ContractMethod">
+                        <option value="">전체</option>
+                        <option value="일반경쟁입찰">일반경쟁입찰</option>
+                        <option value="제한경쟁입찰">제한경쟁입찰</option>
+                        <option value="수의계약">수의계약</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">조회건수</label>
+                    <select class="form-control" id="ContractLimit">
+                        <option value="10">10건</option>
+                        <option value="20">20건</option>
+                        <option value="50">50건</option>
+                    </select>
+                </div>
+                <button class="btn btn-info" onclick="searchContractInfo()">계약정보 조회</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>가격정보 조회</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">품목명</label>
+                    <input type="text" class="form-control" id="PriceItemName" value="사무용 의자">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">기준년월</label>
+                    <input type="month" class="form-control" id="PriceYearMonth" value="2025-05">
+                </div>
+                <button class="btn btn-success" onclick="searchPriceInfo()">가격정보 조회</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h5>G2B 테스트 결과</h5>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearResults()">결과 지우기</button>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                <div id="G2BResults">
+                    <p class="text-muted">테스트 결과가 여기에 표시됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="G2BLoadingModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="loading-spinner"></div>
+                <span id="G2BLoadingText">G2B API 호출 중...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function searchBidAnnouncements() {
+    const query = document.getElementById('BidSearchQuery').value;
+    const limit = document.getElementById('BidSearchLimit').value;
+    
+    if (!query.trim()) {
+        alert('검색어를 입력하세요.');
+        return;
+    }
+    
+    showG2BLoading('입찰공고 검색 중...');
+    
+    try {
+        const response = await fetch('/api/g2b/search', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                query: query,
+                limit: parseInt(limit)
+            })
+        });
+        
+        const result = await response.json();
+        hideG2BLoading();
+        
+        displayG2BResult('입찰공고 검색', result);
+        
+    } catch (error) {
+        hideG2BLoading();
+        displayG2BResult('입찰공고 검색', {success: false, error: error.message});
+    }
+}
+
+async function searchContractInfo() {
+    const method = document.getElementById('ContractMethod').value;
+    const limit = document.getElementById('ContractLimit').value;
+    
+    showG2BLoading('계약정보 조회 중...');
+    
+    try {
+        const response = await fetch('/api/g2b/contract', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                contract_method: method,
+                limit: parseInt(limit)
+            })
+        });
+        
+        const result = await response.json();
+        hideG2BLoading();
+        
+        displayG2BResult('계약정보 조회', result);
+        
+    } catch (error) {
+        hideG2BLoading();
+        displayG2BResult('계약정보 조회', {success: false, error: error.message});
+    }
+}
+
+async function searchPriceInfo() {
+    const itemName = document.getElementById('PriceItemName').value;
+    const yearMonth = document.getElementById('PriceYearMonth').value;
+    
+    if (!itemName.trim()) {
+        alert('품목명을 입력하세요.');
+        return;
+    }
+    
+    showG2BLoading('가격정보 조회 중...');
+    
+    try {
+        const response = await fetch('/api/g2b/price', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                item_name: itemName,
+                year_month: yearMonth.replace('-', '')
+            })
+        });
+        
+        const result = await response.json();
+        hideG2BLoading();
+        
+        displayG2BResult('가격정보 조회', result);
+        
+    } catch (error) {
+        hideG2BLoading();
+        displayG2BResult('가격정보 조회', {success: false, error: error.message});
+    }
+}
+
+function displayG2BResult(testType, result) {
+    const resultsDiv = document.getElementById('G2BResults');
+    const now = new Date().toLocaleTimeString();
+    
+    const resultDiv = document.createElement('div');
+    resultDiv.className = `alert ${result.success ? 'alert-success' : 'alert-danger'} mb-3`;
+    
+    let contentHtml = `
+        <div class="d-flex justify-content-between">
+            <strong>${testType}</strong>
+            <small>${now}</small>
+        </div>
+    `;
+    
+    if (result.success) {
+        const items = result.items || [];
+        contentHtml += `<div class="mt-2"><span class="badge bg-primary">${items.length}건 조회됨</span></div>`;
+        
+        if (items.length > 0) {
+            contentHtml += '<div class="mt-3"><strong>상위 3개 결과:</strong></div>';
+            items.slice(0, 3).forEach((item, index) => {
+                if (testType === '입찰공고 검색') {
+                    contentHtml += `
+                        <div class="border p-2 mt-1">
+                            <div><strong>${item.title}</strong></div>
+                            <div class="text-muted">기관: ${item.organization}</div>
+                            <div class="text-muted">예산: ${item.budget.toLocaleString()}원</div>
+                            <div class="text-muted">마감: ${item.deadline}</div>
+                        </div>
+                    `;
+                } else if (testType === '계약정보 조회') {
+                    contentHtml += `
+                        <div class="border p-2 mt-1">
+                            <div><strong>${item.title}</strong></div>
+                            <div class="text-muted">공급업체: ${item.supplier}</div>
+                            <div class="text-muted">계약금액: ${item.contract_amount.toLocaleString()}원</div>
+                            <div class="text-muted">계약일: ${item.contract_date}</div>
+                        </div>
+                    `;
+                } else if (testType === '가격정보 조회') {
+                    contentHtml += `
+                        <div class="border p-2 mt-1">
+                            <div><strong>${item.item_name}</strong></div>
+                            <div class="text-muted">규격: ${item.standard}</div>
+                            <div class="text-muted">단가: ${item.price.toLocaleString()}원/${item.unit}</div>
+                            <div class="text-muted">기준년월: ${item.year_month}</div>
+                        </div>
+                    `;
+                }
+            });
+        }
+    } else {
+        contentHtml += `<div class="mt-2 text-danger">오류: ${result.error}</div>`;
+    }
+    
+    resultDiv.innerHTML = contentHtml;
+    resultsDiv.appendChild(resultDiv);
+    
+    resultsDiv.scrollTop = resultsDiv.scrollHeight;
+}
+
+function clearResults() {
+    document.getElementById('G2BResults').innerHTML = '<p class="text-muted">테스트 결과가 여기에 표시됩니다.</p>';
+}
+
+function showG2BLoading(text) {
+    document.getElementById('G2BLoadingText').textContent = text;
+    new bootstrap.Modal(document.getElementById('G2BLoadingModal')).show();
+}
+
+function hideG2BLoading() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('G2BLoadingModal'));
+    if (modal) modal.hide();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('PriceYearMonth').value = new Date().toISOString().slice(0, 7);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+
+{% block title %}대시보드 - ProcureMate GUI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>ProcureMate 성능 테스트 대시보드</h1>
+        <p class="text-muted">LLM과 RAG 시스템의 실시간 성능 모니터링 및 테스트</p>
+    </div>
+</div>
+
+<!-- 시스템 상태 카드들 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">LLM 상태</h5>
+                <div class="d-flex align-items-center justify-content-center">
+                    <span class="status-indicator" id="LlmStatus"></span>
+                    <span id="LlmStatusText">확인 중...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Vector DB</h5>
+                <div class="d-flex align-items-center justify-content-center">
+                    <span class="status-indicator" id="VectorDbStatus"></span>
+                    <span id="VectorDbStatusText">확인 중...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">총 테스트</h5>
+                <h3 class="text-primary" id="TotalTestsCount">{{ system_status.total_tests or 0 }}</h3>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">마지막 테스트</h5>
+                <small id="LastTestTime">
+                    {% if system_status.last_test %}
+                        {{ system_status.last_test[:19].replace('T', ' ') }}
+                    {% else %}
+                        없음
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 빠른 테스트 버튼들 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">빠른 테스트</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" class="form-control" id="QuickTestInput" 
+                               placeholder="테스트할 조달 요청을 입력하세요 (예: 사무용 의자 10개 구매)" 
+                               value="사무용 의자 10개 필요합니다">
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-primary me-2" onclick="runQuickLLMTest()">LLM 테스트</button>
+                        <button class="btn btn-info me-2" onclick="runQuickRAGTest()">RAG 검색</button>
+                        <button class="btn btn-success me-2" onclick="runQuickWorkflowTest()">전체 워크플로우</button>
+                        <button class="btn btn-warning me-2" onclick="runHybridSearch()">하이브리드 검색</button>
+                        <button class="btn btn-secondary" onclick="runCompleteWorkflow()">전체 조달 프로세스</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 새로운 API 테스트 영역 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">신규 API 테스트</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>G2B (나라장터) API</h6>
+                        <div class="mb-2">
+                            <button class="btn btn-outline-primary me-2" onclick="testG2BSearch()">입찰공고 검색</button>
+                            <button class="btn btn-outline-secondary me-2" onclick="testG2BContract()">계약정보 조회</button>
+                            <a href="/g2b-test" class="btn btn-primary">G2B 테스트 페이지</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>쿠팡 API</h6>
+                        <div class="mb-2">
+                            <button class="btn btn-outline-success me-2" onclick="testCoupangSearch()">상품 검색</button>
+                            <button class="btn btn-outline-info me-2" onclick="testCoupangProduct()">상품 상세정보</button>
+                            <a href="/coupang-test" class="btn btn-success">쿠팡 테스트 페이지</a>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>문서 자동 생성</h6>
+                        <div class="mb-2">
+                            <button class="btn btn-outline-warning me-2" onclick="testDocumentGeneration()">조달 보고서 생성</button>
+                            <button class="btn btn-outline-dark" onclick="testComparisonDocument()">비교 문서 생성</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>고급 분석</h6>
+                        <div class="mb-2">
+                            <button class="btn btn-outline-danger me-2" onclick="testMatchingAnalysis()">매칭 분석</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 결과 영역 -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">테스트 결과</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div id="TestResults">
+                    {% if recent_tests %}
+                        {% for test in recent_tests %}
+                        <div class="test-result {% if test.success %}success{% else %}error{% endif %}">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ test.test_type }}</strong>
+                                <small>{{ test.timestamp.strftime('%H:%M:%S') }}</small>
+                            </div>
+                            <div class="mt-1">
+                                {% for key, value in test.metrics.items() %}
+                                    <span class="badge bg-secondary me-1">{{ key }}: {{ "%.2f"|format(value) if value is number else value }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">아직 테스트 결과가 없습니다.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">성능 차트</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="PerformanceChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 로딩 모달 -->
+<div class="modal fade" id="LoadingModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="loading-spinner"></div>
+                <span id="LoadingText">테스트 실행 중...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let performanceChart = null;
+    
+    // 시스템 상태 업데이트
+    function updateSystemStatus(status) {
+        // LLM 상태
+        const llmIndicator = document.getElementById('LlmStatus');
+        const llmText = document.getElementById('LlmStatusText');
+        if (status.llm_connected) {
+            llmIndicator.className = 'status-indicator status-online';
+            llmText.textContent = '연결됨';
+        } else {
+            llmIndicator.className = 'status-indicator status-offline';
+            llmText.textContent = '연결 끊김';
+        }
+        
+        // Vector DB 상태
+        const vectorIndicator = document.getElementById('VectorDbStatus');
+        const vectorText = document.getElementById('VectorDbStatusText');
+        if (status.vector_db_ready) {
+            vectorIndicator.className = 'status-indicator status-online';
+            vectorText.textContent = '준비됨';
+        } else {
+            vectorIndicator.className = 'status-indicator status-offline';
+            vectorText.textContent = '연결 끊김';
+        }
+        
+        // 총 테스트 수
+        document.getElementById('TotalTestsCount').textContent = status.total_tests;
+        
+        // 마지막 테스트 시간
+        if (status.last_test) {
+            document.getElementById('LastTestTime').textContent = status.last_test.slice(0, 19).replace('T', ' ');
+        }
+    }
+    
+    // 빠른 LLM 테스트
+    async function runQuickLLMTest() {
+        const query = document.getElementById('QuickTestInput').value;
+        if (!query.trim()) return;
+        
+        showLoading('LLM 분석 중...');
+        
+        try {
+            const response = await fetch('/api/llm/test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    query: query,
+                    temperature: 0.7,
+                    max_tokens: 512
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('LLM 테스트', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('LLM 테스트', {success: false, error: error.message});
+        }
+    }
+    
+    // 빠른 RAG 테스트
+    async function runQuickRAGTest() {
+        const query = document.getElementById('QuickTestInput').value;
+        if (!query.trim()) return;
+        
+        showLoading('RAG 검색 중...');
+        
+        try {
+            const response = await fetch('/api/rag/test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    query: query,
+                    limit: 5
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('RAG 검색', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('RAG 검색', {success: false, error: error.message});
+        }
+    }
+    
+    // 빠른 워크플로우 테스트
+    async function runQuickWorkflowTest() {
+        const query = document.getElementById('QuickTestInput').value;
+        if (!query.trim()) return;
+        
+        showLoading('전체 워크플로우 실행 중...');
+        
+        try {
+            const response = await fetch('/api/workflow/test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({query: query})
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('워크플로우', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('워크플로우', {success: false, error: error.message});
+        }
+    }
+    
+    // 하이브리드 검색 테스트
+    async function runHybridSearch() {
+        const query = document.getElementById('QuickTestInput').value;
+        if (!query.trim()) return;
+        
+        showLoading('하이브리드 검색 실행 중...');
+        
+        try {
+            const response = await fetch('/api/search/hybrid', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({query: query})
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('하이브리드 검색', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('하이브리드 검색', {success: false, error: error.message});
+        }
+    }
+    
+    // 전체 조달 프로세스 테스트
+    async function runCompleteWorkflow() {
+        const query = document.getElementById('QuickTestInput').value;
+        if (!query.trim()) return;
+        
+        showLoading('전체 조달 프로세스 실행 중...');
+        
+        try {
+            const response = await fetch('/api/procurement/complete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    query: query,
+                    requirements: {
+                        budget_range: "미정",
+                        urgency: "normal",
+                        quantity: 1
+                    }
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('전체 조달', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('전체 조달', {success: false, error: error.message});
+        }
+    }
+    
+    // G2B API 테스트 함수들
+    async function testG2BSearch() {
+        showLoading('G2B 입찰공고 검색 중...');
+        
+        try {
+            const response = await fetch('/api/g2b/search', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    query: "사무용품",
+                    limit: 10
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('G2B 검색', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('G2B 검색', {success: false, error: error.message});
+        }
+    }
+    
+    async function testG2BContract() {
+        showLoading('G2B 계약정보 조회 중...');
+        
+        try {
+            const response = await fetch('/api/g2b/contract/test-contract-id');
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('G2B 계약', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('G2B 계약', {success: false, error: error.message});
+        }
+    }
+    
+    // 쿠팡 API 테스트 함수들
+    async function testCoupangSearch() {
+        const query = document.getElementById('QuickTestInput').value || "사무용 의자";
+        
+        showLoading('쿠팡 상품 검색 중...');
+        
+        try {
+            const response = await fetch('/api/coupang/search', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({query: query, limit: 10})
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('쿠팡 검색', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('쿠팡 검색', {success: false, error: error.message});
+        }
+    }
+    
+    async function testCoupangProduct() {
+        showLoading('쿠팡 상품 상세정보 조회 중...');
+        
+        try {
+            const response = await fetch('/api/coupang/product/test-product-id');
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('쿠팡 상품', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('쿠팡 상품', {success: false, error: error.message});
+        }
+    }
+    
+    // 문서 생성 테스트 함수들
+    async function testDocumentGeneration() {
+        showLoading('조달 보고서 생성 중...');
+        
+        try {
+            const response = await fetch('/api/document/report', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    products: [{name: "사무용 의자", price: 100000}],
+                    requirements: {budget: 150000, quantity: 1}
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('보고서 생성', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('보고서 생성', {success: false, error: error.message});
+        }
+    }
+    
+    async function testComparisonDocument() {
+        showLoading('비교 문서 생성 중...');
+        
+        try {
+            const response = await fetch('/api/document/comparison', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    products: [
+                        {name: "의자 A", price: 100000},
+                        {name: "의자 B", price: 120000}
+                    ]
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('비교 문서', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('비교 문서', {success: false, error: error.message});
+        }
+    }
+    
+    // 매칭 분석 테스트
+    async function testMatchingAnalysis() {
+        showLoading('매칭 분석 실행 중...');
+        
+        try {
+            const response = await fetch('/api/analyze/matching', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    products: [{name: "사무용 의자", price: 100000}],
+                    requirements: {budget_max: 150000, category: "사무용품"}
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            addTestResult('매칭 분석', result);
+            
+        } catch (error) {
+            hideLoading();
+            addTestResult('매칭 분석', {success: false, error: error.message});
+        }
+    }
+    
+    // 테스트 결과 추가
+    function addTestResult(testType, result) {
+        const resultsDiv = document.getElementById('TestResults');
+        const resultDiv = document.createElement('div');
+        resultDiv.className = `test-result ${result.success ? 'success' : 'error'}`;
+        
+        const now = new Date().toLocaleTimeString();
+        
+        let metricsHtml = '';
+        if (result.metrics) {
+            for (const [key, value] of Object.entries(result.metrics)) {
+                const displayValue = typeof value === 'number' ? value.toFixed(2) : value;
+                metricsHtml += `<span class="badge bg-secondary me-1">${key}: ${displayValue}</span>`;
+            }
+        }
+        
+        resultDiv.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <strong>${testType}</strong>
+                <small>${now}</small>
+            </div>
+            <div class="mt-1">${metricsHtml}</div>
+            ${!result.success ? `<div class="text-danger mt-1">오류: ${result.error}</div>` : ''}
+        `;
+        
+        resultsDiv.insertBefore(resultDiv, resultsDiv.firstChild);
+        
+        // 차트 업데이트
+        updatePerformanceChart(testType, result);
+    }
+    
+    // 성능 차트 업데이트
+    function updatePerformanceChart(testType, result) {
+        if (!performanceChart) {
+            initPerformanceChart();
+        }
+        
+        const responseTime = result.metrics?.response_time || result.metrics?.total_time || 0;
+        
+        performanceChart.data.labels.push(new Date().toLocaleTimeString());
+        performanceChart.data.datasets[0].data.push(responseTime);
+        
+        // 최대 20개 데이터 포인트만 유지
+        if (performanceChart.data.labels.length > 20) {
+            performanceChart.data.labels.shift();
+            performanceChart.data.datasets[0].data.shift();
+        }
+        
+        performanceChart.update();
+    }
+    
+    // 성능 차트 초기화
+    function initPerformanceChart() {
+        const ctx = document.getElementById('PerformanceChart').getContext('2d');
+        performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '응답 시간 (초)',
+                    data: [],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '시간 (초)'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // 로딩 표시/숨김
+    function showLoading(text) {
+        document.getElementById('LoadingText').textContent = text;
+        new bootstrap.Modal(document.getElementById('LoadingModal')).show();
+    }
+    
+    function hideLoading() {
+        bootstrap.Modal.getInstance(document.getElementById('LoadingModal'))?.hide();
+    }
+    
+    // 페이지 로드시 차트 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+        initPerformanceChart();
+        
+        // 시스템 상태 초기 로드
+        fetch('/api/system/status')
+            .then(response => response.json())
+            .then(status => updateSystemStatus(status))
+            .catch(console.error);
+        
+        // 5초마다 시스템 상태 업데이트
+        setInterval(() => {
+            fetch('/api/system/status')
+                .then(response => response.json())
+                .then(status => updateSystemStatus(status))
+                .catch(console.error);
+        }, 5000);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+
+{% block title %}RAG 분석 - ProcureMate GUI{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>RAG 시스템 분석 & 튜닝</h1>
+        <p class="text-muted">벡터 검색 성능과 유사도 매칭을 분석합니다</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- RAG 테스트 입력 -->
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">검색 테스트</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">검색 쿼리</label>
+                    <textarea class="form-control" id="SearchQuery" rows="3"
+                              placeholder="예: 사무용 의자, 회의용 테이블, 노트북 등">사무용 의자</textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">검색 개수</label>
+                        <select class="form-select" id="SearchLimit">
+                            <option value="3">3개</option>
+                            <option value="5" selected>5개</option>
+                            <option value="10">10개</option>
+                            <option value="20">20개</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">컬렉션</label>
+                        <select class="form-select" id="CollectionSelect">
+                            <option value="">기본</option>
+                            <option value="products">상품</option>
+                            <option value="cases">사례</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-3 d-grid">
+                    <button type="button" class="btn btn-primary" onclick="runRAGTest()">
+                        <span id="SearchButtonText">검색 실행</span>
+                    </button>
+                </div>
+                
+                <div class="mt-3">
+                    <h6>빠른 테스트:</h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadSearchQuery('사무용 의자')">사무용 의자</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadSearchQuery('회의실 테이블')">회의실 테이블</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadSearchQuery('노트북 컴퓨터')">노트북 컴퓨터</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadSearchQuery('사무용품 세트')">사무용품 세트</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 검색 결과 -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">검색 결과</h5>
+            </div>
+            <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                <div id="SearchResults">
+                    <p class="text-muted text-center">검색을 실행하면 결과가 여기에 표시됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 성능 분석 -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">검색 성능 메트릭</h5>
+            </div>
+            <div class="card-body">
+                <div id="PerformanceMetrics">
+                    <p class="text-muted">검색을 실행하면 성능 메트릭이 표시됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">유사도 분포</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="SimilarityChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 상세 분석 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">상세 검색 분석</h5>
+            </div>
+            <div class="card-body">
+                <div id="DetailedAnalysis" style="display: none;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>검색 통계</h6>
+                            <div id="SearchStats"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>품질 분석</h6>
+                            <div id="QualityAnalysis"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>검색 결과 원본 데이터</h6>
+                        <pre id="RawSearchData" class="bg-light p-3" style="max-height: 300px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 벤치마크 테스트 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">벤치마크 테스트</h5>
+            </div>
+            <div class="card-body">
+                <p>다양한 쿼리로 RAG 시스템의 전반적인 성능을 평가합니다.</p>
+                <button class="btn btn-info" onclick="runBenchmarkTest()">
+                    벤치마크 실행
+                </button>
+                <div id="BenchmarkResults" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let searchHistory = [];
+    let similarityChart = null;
+    
+    // RAG 검색 테스트 실행
+    async function runRAGTest() {
+        const query = document.getElementById('SearchQuery').value;
+        const limit = parseInt(document.getElementById('SearchLimit').value);
+        const collection = document.getElementById('CollectionSelect').value;
+        
+        if (!query.trim()) {
+            alert('검색 쿼리를 입력해주세요.');
+            return;
+        }
+        
+        setSearchingState(true);
+        
+        try {
+            const response = await fetch('/api/rag/test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    query: query,
+                    limit: limit,
+                    collection_name: collection || null
+                })
+            });
+            
+            const result = await response.json();
+            displaySearchResults(result, {query, limit, collection});
+            
+        } catch (error) {
+            displaySearchError(error.message);
+        } finally {
+            setSearchingState(false);
+        }
+    }
+    
+    // 검색 결과 표시
+    function displaySearchResults(result, config) {
+        searchHistory.push({result, config, timestamp: new Date()});
+        
+        const resultsDiv = document.getElementById('SearchResults');
+        
+        if (!result.success) {
+            resultsDiv.innerHTML = `<div class="alert alert-danger">검색 실패: ${result.error}</div>`;
+            return;
+        }
+        
+        const results = result.results;
+        const metrics = result.metrics;
+        
+        let resultsHtml = `
+            <div class="mb-3">
+                <h6>검색 결과 (${results.length}개) - ${metrics.response_time.toFixed(3)}초</h6>
+                <small class="text-muted">평균 유사도: ${metrics.avg_similarity.toFixed(3)}</small>
+            </div>
+        `;
+        
+        results.forEach((item, index) => {
+            const similarity = item.distance ? (1 - item.distance).toFixed(3) : 'N/A';
+            const metadata = item.metadata || {};
+            
+            resultsHtml += `
+                <div class="border rounded p-3 mb-2">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="mb-1">#${index + 1}</h6>
+                        <span class="badge bg-primary">유사도: ${similarity}</span>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <strong>내용:</strong>
+                        <p class="mb-1">${item.document || item.content || '내용 없음'}</p>
+                    </div>
+                    
+                    ${Object.keys(metadata).length > 0 ? `
+                        <div class="mt-2">
+                            <strong>메타데이터:</strong>
+                            <ul class="list-unstyled ms-3">
+                                ${Object.entries(metadata).map(([key, value]) => 
+                                    `<li><small><strong>${key}:</strong> ${value}</small></li>`
+                                ).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        resultsDiv.innerHTML = resultsHtml;
+        
+        // 성능 메트릭 업데이트
+        updatePerformanceMetrics(metrics);
+        
+        // 유사도 차트 업데이트
+        updateSimilarityChart(results);
+        
+        // 상세 분석 표시
+        showDetailedAnalysis(result, config);
+    }
+    
+    // 성능 메트릭 업데이트
+    function updatePerformanceMetrics(metrics) {
+        const metricsDiv = document.getElementById('PerformanceMetrics');
+        
+        metricsDiv.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>응답 시간:</strong> ${metrics.response_time.toFixed(3)}초</p>
+                    <p><strong>결과 수:</strong> ${metrics.results_count}개</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>평균 유사도:</strong> ${metrics.avg_similarity.toFixed(3)}</p>
+                    <p><strong>메타데이터 완전성:</strong> ${metrics.has_metadata ? '✅' : '❌'}</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 유사도 차트 업데이트
+    function updateSimilarityChart(results) {
+        const similarities = results.map((item, index) => ({
+            x: index + 1,
+            y: item.distance ? (1 - item.distance) : 0
+        }));
+        
+        if (!similarityChart) {
+            const ctx = document.getElementById('SimilarityChart').getContext('2d');
+            similarityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    datasets: [{
+                        label: '유사도 점수',
+                        data: similarities,
+                        backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                        borderColor: '#007bff',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '검색 결과 순서'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 1,
+                            title: {
+                                display: true,
+                                text: '유사도 점수'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            similarityChart.data.datasets[0].data = similarities;
+            similarityChart.update();
+        }
+    }
+    
+    // 상세 분석 표시
+    function showDetailedAnalysis(result, config) {
+        const detailDiv = document.getElementById('DetailedAnalysis');
+        const statsDiv = document.getElementById('SearchStats');
+        const qualityDiv = document.getElementById('QualityAnalysis');
+        const rawDiv = document.getElementById('RawSearchData');
+        
+        // 검색 통계
+        const results = result.results;
+        const similarities = results.map(r => r.distance ? (1 - r.distance) : 0);
+        const maxSim = Math.max(...similarities);
+        const minSim = Math.min(...similarities);
+        const avgSim = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+        
+        statsDiv.innerHTML = `
+            <ul class="list-unstyled">
+                <li><strong>검색 쿼리:</strong> "${config.query}"</li>
+                <li><strong>요청 개수:</strong> ${config.limit}개</li>
+                <li><strong>실제 반환:</strong> ${results.length}개</li>
+                <li><strong>최고 유사도:</strong> ${maxSim.toFixed(3)}</li>
+                <li><strong>최저 유사도:</strong> ${minSim.toFixed(3)}</li>
+                <li><strong>평균 유사도:</strong> ${avgSim.toFixed(3)}</li>
+            </ul>
+        `;
+        
+        // 품질 분석
+        const highQualityCount = similarities.filter(s => s > 0.8).length;
+        const mediumQualityCount = similarities.filter(s => s > 0.6 && s <= 0.8).length;
+        const lowQualityCount = similarities.filter(s => s <= 0.6).length;
+        
+        qualityDiv.innerHTML = `
+            <ul class="list-unstyled">
+                <li><strong>고품질 (0.8+):</strong> ${highQualityCount}개</li>
+                <li><strong>중품질 (0.6-0.8):</strong> ${mediumQualityCount}개</li>
+                <li><strong>저품질 (0.6-):</strong> ${lowQualityCount}개</li>
+                <li><strong>품질 점수:</strong> ${((highQualityCount * 3 + mediumQualityCount * 2 + lowQualityCount) / results.length / 3 * 10).toFixed(1)}/10</li>
+            </ul>
+        `;
+        
+        // 원본 데이터
+        rawDiv.textContent = JSON.stringify(result, null, 2);
+        
+        detailDiv.style.display = 'block';
+    }
+    
+    // 벤치마크 테스트 실행
+    async function runBenchmarkTest() {
+        const benchmarkQueries = [
+            '사무용 의자',
+            '회의실 테이블',
+            '노트북 컴퓨터',
+            '프린터',
+            '사무용품 세트',
+            '화이트보드',
+            '책상',
+            '모니터'
+        ];
+        
+        const benchmarkDiv = document.getElementById('BenchmarkResults');
+        benchmarkDiv.innerHTML = '<div class="text-center"><div class="loading-spinner"></div> 벤치마크 실행 중...</div>';
+        
+        const results = [];
+        
+        for (const query of benchmarkQueries) {
+            try {
+                const response = await fetch('/api/rag/test', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: query,
+                        limit: 5
+                    })
+                });
+                
+                const result = await response.json();
+                results.push({
+                    query: query,
+                    success: result.success,
+                    metrics: result.success ? result.metrics : null,
+                    error: result.success ? null : result.error
+                });
+                
+            } catch (error) {
+                results.push({
+                    query: query,
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+        
+        // 벤치마크 결과 표시
+        displayBenchmarkResults(results);
+    }
+    
+    // 벤치마크 결과 표시
+    function displayBenchmarkResults(results) {
+        const benchmarkDiv = document.getElementById('BenchmarkResults');
+        
+        const successCount = results.filter(r => r.success).length;
+        const avgResponseTime = results
+            .filter(r => r.success)
+            .reduce((sum, r) => sum + r.metrics.response_time, 0) / successCount;
+        const avgSimilarity = results
+            .filter(r => r.success)
+            .reduce((sum, r) => sum + r.metrics.avg_similarity, 0) / successCount;
+        
+        let resultsHtml = `
+            <div class="alert alert-info">
+                <h6>벤치마크 요약</h6>
+                <ul class="mb-0">
+                    <li>성공률: ${successCount}/${results.length} (${(successCount/results.length*100).toFixed(1)}%)</li>
+                    <li>평균 응답시간: ${avgResponseTime.toFixed(3)}초</li>
+                    <li>평균 유사도: ${avgSimilarity.toFixed(3)}</li>
+                </ul>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>쿼리</th>
+                            <th>상태</th>
+                            <th>응답시간</th>
+                            <th>결과수</th>
+                            <th>평균 유사도</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        results.forEach(result => {
+            const statusIcon = result.success ? '✅' : '❌';
+            const responseTime = result.success ? result.metrics.response_time.toFixed(3) : '-';
+            const resultCount = result.success ? result.metrics.results_count : '-';
+            const avgSim = result.success ? result.metrics.avg_similarity.toFixed(3) : '-';
+            
+            resultsHtml += `
+                <tr>
+                    <td>${result.query}</td>
+                    <td>${statusIcon}</td>
+                    <td>${responseTime}초</td>
+                    <td>${resultCount}</td>
+                    <td>${avgSim}</td>
+                </tr>
+            `;
+        });
+        
+        resultsHtml += '</tbody></table></div>';
+        benchmarkDiv.innerHTML = resultsHtml;
+    }
+    
+    // 빠른 검색 쿼리 로드
+    function loadSearchQuery(query) {
+        document.getElementById('SearchQuery').value = query;
+    }
+    
+    // 검색 상태 UI 업데이트
+    function setSearchingState(searching) {
+        const button = document.querySelector('#SearchButtonText');
+        if (searching) {
+            button.innerHTML = '<span class="loading-spinner"></span> 검색 중...';
+        } else {
+            button.textContent = '검색 실행';
+        }
+    }
+    
+    // 검색 오류 표시
+    function displaySearchError(message) {
+        const resultsDiv = document.getElementById('SearchResults');
+        resultsDiv.innerHTML = `<div class="alert alert-danger"><strong>검색 오류:</strong> ${message}</div>`;
+    }
+    
+    // 엔터키로 검색 실행
+    document.getElementById('SearchQuery').addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            runRAGTest();
+        }
+    });
+</script>
+{% endblock %}
