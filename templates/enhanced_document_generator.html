@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}향상된 문서 생성기 - ProcureMate GUI{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-3">
+        한국 기업 구매-조달 문서 생성기
+    </h1>
+    <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+        템플릿 기반 AI 문서 자동 생성 시스템
+    </p>
+</div>
+
+<!-- TemplateLoader -->
+<div class="mb-6">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center">
+            <svg class="w-5 h-5 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            템플릿 불러오기
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">템플릿 선택</label>
+                <select id="TemplateSelector" class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700">
+                    <option value="">템플릿을 선택하세요</option>
+                </select>
+            </div>
+            
+            <div class="flex items-end space-x-2">
+                <button onclick="loadSelectedTemplate()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                    불러오기
+                </button>
+                
+                <button onclick="saveCurrentAsTemplate()" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    저장
+                </button>
+            </div>
+            
+            <div>
+                <input type="text" id="NewTemplateName" placeholder="새 템플릿 이름" class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+    <!-- DocumentTypeSelection -->
+    <div class="lg:col-span-2">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center">
+                <svg class="w-6 h-6 text-blue-600 dark:text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                문서 타입 선택
+            </h3>
+            
+            <div id="DocumentTypeList" class="space-y-2">
+                <div class="text-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+                    <p class="text-slate-600 dark:text-slate-400">문서 타입 로딩 중...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DocumentForm -->
+    <div class="lg:col-span-3">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 flex items-center">
+                    <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    문서 정보 입력
+                </h3>
+                <button id="GenerateButton" disabled class="px-6 py-2 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200">
+                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                    문서 생성
+                </button>
+            </div>
+            
+            <div id="DocumentFormContainer">
+                <div class="text-center py-20">
+                    <svg class="w-16 h-16 text-slate-400 dark:text-slate-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium">좌측에서 문서 타입을 선택하거나 템플릿을 불러오세요</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GeneratedDocumentResults -->
+<div id="ResultSection" class="mt-8 hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 flex items-center">
+                <svg class="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                생성된 문서
+            </h3>
+            <div class="flex space-x-3">
+                <button id="CopyButton" class="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors duration-200">
+                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                    복사
+                </button>
+                <button id="DownloadButton" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors duration-200">
+                    <svg class="w-4 h-4 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    다운로드
+                </button>
+            </div>
+        </div>
+        
+        <div id="GeneratedContent" class="border border-slate-200 dark:border-slate-600 rounded-lg p-6 bg-slate-50 dark:bg-slate-700 max-h-96 overflow-y-auto">
+            <!-- 생성된 문서 내용이 여기에 표시됩니다 -->
+        </div>
+    </div>
+</div>
+
+<!-- ProgressModal -->
+<div id="ProgressModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary-600 border-t-transparent mx-auto mb-4"></div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">문서 생성 중...</h3>
+            <p class="text-slate-600 dark:text-slate-400 mb-4">AI가 문서를 작성하고 있습니다. 잠시만 기다려주세요.</p>
+            
+            <div class="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2">
+                <div id="ProgressBar" class="bg-primary-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TemplateSaveModal -->
+<div id="TemplateSaveModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">템플릿 저장</h3>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">템플릿 이름</label>
+                <input type="text" id="SaveTemplateName" class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">설명</label>
+                <textarea id="SaveTemplateDesc" rows="3" class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg"></textarea>
+            </div>
+        </div>
+        
+        <div class="flex space-x-3 mt-6">
+            <button onclick="confirmSaveTemplate()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-lg">저장</button>
+            <button onclick="closeSaveModal()" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-3 rounded-lg">취소</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/enhanced_document_generator.js"></script>
+{% endblock %}

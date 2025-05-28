@@ -101,10 +101,20 @@ async def workflow_page(request: Request):
     """워크플로우 테스트 페이지"""
     return templates.TemplateResponse("workflow.html", {"request": request})
 
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """향상된 설정 페이지"""
+    return templates.TemplateResponse("settings.html", {"request": request})
+
 @app.get("/document-generator", response_class=HTMLResponse)
 async def document_generator_page(request: Request):
-    """문서 생성기 페이지"""
+    """기본 문서 생성기 페이지"""
     return templates.TemplateResponse("document_generator.html", {"request": request})
+
+@app.get("/enhanced-document-generator", response_class=HTMLResponse)
+async def enhanced_document_generator_page(request: Request):
+    """향상된 문서 생성기 페이지"""
+    return templates.TemplateResponse("enhanced_document_generator.html", {"request": request})
 
 @app.get("/g2b-test", response_class=HTMLResponse)
 async def g2b_test_page(request: Request):
@@ -173,7 +183,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8080,
+        port=8081,
         reload=True,
         log_level="info"
     )

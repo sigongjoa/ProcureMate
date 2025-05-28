@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전체 워크플로우 테스트 - ProcureMate GUI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <!-- Header -->
+    <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-primary-600 dark:text-primary-400">ProcureMate GUI</h1>
+                </div>
+
+                <nav class="hidden md:flex space-x-1">
+                    <a href="index.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">대시보드</a>
+                    <a href="llm-test.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">LLM 테스트</a>
+                    <a href="rag-analysis.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">RAG 분석</a>
+                    <a href="workflow-test.html" class="bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-lg text-sm font-medium">워크플로우</a>
+                    <a href="g2b-test.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">G2B 테스트</a>
+                    <a href="coupang-test.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">쿠팡 테스트</a>
+                    <a href="document-generator.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">문서생성</a>
+                    <a href="settings.html" class="text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">설정</a>
+                </nav>
+
+                <div class="flex items-center space-x-4">
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors duration-200">
+                        <svg class="w-5 h-5 text-slate-600 dark:text-slate-300 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                        <svg class="w-5 h-5 text-slate-300 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </button>
+                    <div class="hidden sm:flex items-center space-x-2 text-sm">
+                        <div class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                        <span class="text-slate-600 dark:text-slate-300">연결 확인 중...</span>
+                    </div>
+                    <button id="mobileMenuToggle" class="md:hidden p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors duration-200">
+                        <svg class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation -->
+        <div id="mobileMenu" class="md:hidden hidden bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+            <div class="px-4 py-3 space-y-1">
+                <a href="index.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">대시보드</a>
+                <a href="llm-test.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">LLM 테스트</a>
+                <a href="rag-analysis.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">RAG 분석</a>
+                <a href="workflow-test.html" class="block bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-2 rounded-lg text-sm font-medium">워크플로우</a>
+                <a href="g2b-test.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">G2B 테스트</a>
+                <a href="coupang-test.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">쿠팡 테스트</a>
+                <a href="document-generator.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">문서생성</a>
+                <a href="settings.html" class="block text-slate-600 dark:text-slate-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">설정</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Page Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100 mb-3">
+                전체 워크플로우 테스트
+            </h1>
+            <p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+                LLM → 데이터 수집 → RAG → 문서 생성의 전체 프로세스를 테스트합니다
+            </p>
+        </div>
+
+        <!-- Workflow Input -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
+            <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center">
+                <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+                워크플로우 실행
+            </h3>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        주된 요청
+                    </label>
+                    <textarea 
+                        class="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 resize-none" 
+                        rows="4"
+                        placeholder="회의실 데이블 5개와 의자 20개가 필요합니다. 예산은 500만원 정도이고, 다음 달까지 납품되어야 합니다."
+                    ></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                        빠른 테스트 시나리오
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="px-3 py-2 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200">
+                            사무용품
+                        </button>
+                        <button class="px-3 py-2 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200">
+                            회의실
+                        </button>
+                        <button class="px-3 py-2 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200">
+                            IT 장비
+                        </button>
+                        <button class="px-3 py-2 text-xs font-medium border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors duration-200">
+                            가구
+                        </button>
+                    </div>
+                </div>
+
+                <button class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                    </svg>
+                    전체 워크플로우 실행
+                </button>
+            </div>
+        </div>
+
+        <!-- Workflow Steps -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
+            <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center">
+                <svg class="w-6 h-6 text-purple-600 dark:text-purple-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                실행 진행 상황
+            </h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="relative bg-primary-50 dark:bg-primary-900/20 border-2 border-primary-200 dark:border-primary-700 rounded-lg p-4 text-center">
+                    <div class="w-8 h-8 bg-primary-600 text-white rounded-full flex items-center justify-center font-bold text-sm mx-auto mb-3">1</div>
+                    <h4 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">LLM 분석</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">대기</p>
+                    <div class="absolute -right-2 top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-primary-200 dark:border-l-primary-700 border-t-4 border-t-transparent border-b-4 border-b-transparent lg:block hidden"></div>
+                </div>
+                
+                <div class="relative bg-slate-50 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 rounded-lg p-4 text-center">
+                    <div class="w-8 h-8 bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm mx-auto mb-3">2</div>
+                    <h4 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">데이터 수집</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">대기</p>
+                    <div class="absolute -right-2 top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-slate-200 dark:border-l-slate-600 border-t-4 border-t-transparent border-b-4 border-b-transparent lg:block hidden"></div>
+                </div>
+                
+                <div class="relative bg-slate-50 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 rounded-lg p-4 text-center">
+                    <div class="w-8 h-8 bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm mx-auto mb-3">3</div>
+                    <h4 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">RAG 검색</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">대기</p>
+                    <div class="absolute -right-2 top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-slate-200 dark:border-l-slate-600 border-t-4 border-t-transparent border-b-4 border-b-transparent lg:block hidden"></div>
+                </div>
+                
+                <div class="bg-slate-50 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 rounded-lg p-4 text-center">
+                    <div class="w-8 h-8 bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-400 rounded-full flex items-center justify-center font-bold text-sm mx-auto mb-3">4</div>
+                    <h4 class="font-semibold text-slate-900 dark:text-slate-100 mb-1">문서 생성</h4>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">대기</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Results -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center">
+                    <span class="w-6 h-6 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-bold mr-3">1</span>
+                    LLM 분석 결과
+                </h4>
+                <div class="flex items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                    <p class="text-slate-500 dark:text-slate-400 font-medium">워크플로우를 실행하면 결과가 표시됩니다</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center">
+                    <span class="w-6 h-6 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-400 text-sm font-bold mr-3">2</span>
+                    데이터 수집 결과
+                </h4>
+                <div class="flex items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                    <p class="text-slate-500 dark:text-slate-400 font-medium">대기 중...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center">
+                    <span class="w-6 h-6 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-400 text-sm font-bold mr-3">3</span>
+                    RAG 검색 결과
+                </h4>
+                <div class="flex items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                    <p class="text-slate-500 dark:text-slate-400 font-medium">대기 중...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center">
+                    <span class="w-6 h-6 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-400 text-sm font-bold mr-3">4</span>
+                    문서 생성 결과
+                </h4>
+                <div class="flex items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                    <p class="text-slate-500 dark:text-slate-400 font-medium">대기 중...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Summary -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+            <h3 class="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-6 flex items-center">
+                <svg class="w-6 h-6 text-orange-600 dark:text-orange-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                성능 요약 & 차트
+            </h3>
+            <div class="flex items-center justify-center h-48 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                <p class="text-slate-500 dark:text-slate-400 font-medium">대기 중...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            html.classList.add('dark');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            const theme = html.classList.contains('dark') ? 'dark' : 'light';
+            localStorage.setItem('theme', theme);
+        });
+
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const mobileMenu = document.getElementById('mobileMenu');
+        
+        mobileMenuToggle.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!mobileMenuToggle.contains(e.target) && !mobileMenu.contains(e.target)) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                mobileMenu.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

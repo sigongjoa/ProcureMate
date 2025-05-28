@@ -37,9 +37,14 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📝 문서 정보 입력</h5>
-                    <button id="GenerateButton" class="btn btn-primary btn-sm" disabled>
-                        <i class="fas fa-magic"></i> 문서 생성
-                    </button>
+                    <div class="btn-group">
+                        <button id="LoadTemplateButton" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#TemplateModal">
+                            <i class="fas fa-folder-open"></i> 템플릿
+                        </button>
+                        <button id="GenerateButton" class="btn btn-primary btn-sm" disabled>
+                            <i class="fas fa-magic"></i> 문서 생성
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div id="DocumentFormContainer">
@@ -60,6 +65,9 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📄 생성된 문서</h5>
                     <div>
+                        <button id="SaveTemplateButton" class="btn btn-outline-success btn-sm me-2">
+                            <i class="fas fa-save"></i> 템플릿 저장
+                        </button>
                         <button id="CopyButton" class="btn btn-outline-secondary btn-sm me-2">
                             <i class="fas fa-copy"></i> 복사
                         </button>
@@ -95,6 +103,84 @@
     </div>
 </div>
 
+<!-- 템플릿 모달 -->
+<div class="modal fade" id="TemplateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">템플릿 관리</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="TemplateModalTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#LoadTab">
+                            <i class="fas fa-folder-open"></i> 템플릿 불러오기
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#SaveTab">
+                            <i class="fas fa-save"></i> 템플릿 저장
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content mt-3">
+                    <!-- 템플릿 불러오기 탭 -->
+                    <div class="tab-pane fade show active" id="LoadTab">
+                        <div class="mb-3">
+                            <label class="form-label">저장된 템플릿 목록</label>
+                            <div id="SavedTemplatesList" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-center text-muted">
+                                    <div class="loading-spinner mb-2"></div>
+                                    템플릿 로딩 중...
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">취소</button>
+                            <button type="button" id="LoadSelectedTemplateButton" class="btn btn-primary" disabled>선택한 템플릿 불러오기</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 템플릿 저장 탭 -->
+                    <div class="tab-pane fade" id="SaveTab">
+                        <form id="SaveTemplateForm">
+                            <div class="mb-3">
+                                <label for="TemplateNameInput" class="form-label">템플릿 이름 <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="TemplateNameInput" placeholder="예: 비품구매_요청서_기본" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="TemplateDescriptionInput" class="form-label">설명</label>
+                                <textarea class="form-control" id="TemplateDescriptionInput" rows="2" placeholder="템플릿에 대한 간단한 설명을 입력하세요"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">저장할 내용</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="SaveFormDataCheck" checked>
+                                    <label class="form-check-label" for="SaveFormDataCheck">
+                                        현재 입력된 폼 데이터
+                                    </label>
+                                </div>
+                                <div class="form-check" id="SaveDocumentCheck" style="display: none;">
+                                    <input class="form-check-input" type="checkbox" id="SaveGeneratedContentCheck">
+                                    <label class="form-check-label" for="SaveGeneratedContentCheck">
+                                        생성된 문서 내용
+                                    </label>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">취소</button>
+                            <button type="button" id="SaveNewTemplateButton" class="btn btn-success">템플릿 저장</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -104,6 +190,8 @@ class DocumentGenerator {
         this.selectedDocumentType = null;
         this.documentTypes = [];
         this.currentFormData = {};
+        this.savedTemplates = [];
+        this.selectedTemplate = null;
         this.init();
     }
 
@@ -174,6 +262,25 @@ class DocumentGenerator {
         // 다운로드 버튼
         document.getElementById('DownloadButton').addEventListener('click', () => {
             this.downloadDocument();
+        });
+        
+        // 템플릿 저장 버튼
+        document.getElementById('SaveTemplateButton').addEventListener('click', () => {
+            this.showSaveTemplateModal();
+        });
+        
+        // 템플릿 모달 이벤트
+        document.getElementById('LoadSelectedTemplateButton').addEventListener('click', () => {
+            this.loadSelectedTemplate();
+        });
+        
+        document.getElementById('SaveNewTemplateButton').addEventListener('click', () => {
+            this.saveNewTemplate();
+        });
+        
+        // 템플릿 모달이 열릴 때 템플릿 목록 로드
+        document.getElementById('TemplateModal').addEventListener('shown.bs.modal', () => {
+            this.loadSavedTemplates();
         });
     }
 
@@ -454,6 +561,192 @@ class DocumentGenerator {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+    }
+
+    // 템플릿 관리 기능
+    async loadSavedTemplates() {
+        try {
+            const response = await fetch('/api/templates/document/list');
+            const result = await response.json();
+            
+            if (result.success) {
+                this.savedTemplates = result.templates;
+                this.renderSavedTemplatesList();
+            } else {
+                this.showError('템플릿 목록 로드 실패');
+            }
+        } catch (error) {
+            console.error('템플릿 목록 로드 오류:', error);
+            this.showError('서버 연결 오류');
+        }
+    }
+    
+    renderSavedTemplatesList() {
+        const container = document.getElementById('SavedTemplatesList');
+        
+        if (this.savedTemplates.length === 0) {
+            container.innerHTML = '<div class="text-center text-muted">저장된 템플릿이 없습니다</div>';
+            return;
+        }
+        
+        const templateItems = this.savedTemplates.map(template => `
+            <div class="card mb-2 template-item" data-template="${template.name}">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="card-title mb-1">${template.name}</h6>
+                            <p class="card-text text-muted small mb-2">
+                                수정: ${new Date(template.modified).toLocaleDateString('ko-KR')}
+                            </p>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input template-radio" type="radio" name="templateSelect" value="${template.name}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        container.innerHTML = templateItems;
+        
+        // 라디오 버튼 이벤트
+        container.querySelectorAll('.template-radio').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this.selectedTemplate = e.target.value;
+                    document.getElementById('LoadSelectedTemplateButton').disabled = false;
+                }
+            });
+        });
+    }
+    
+    async loadSelectedTemplate() {
+        if (!this.selectedTemplate) return;
+        
+        try {
+            const response = await fetch(`/api/templates/document/load/${this.selectedTemplate}`);
+            const result = await response.json();
+            
+            if (result.success) {
+                this.applyTemplateData(result.data);
+                // 모달 닫기
+                const modal = bootstrap.Modal.getInstance(document.getElementById('TemplateModal'));
+                modal.hide();
+                this.showSuccess('템플릿이 로드되었습니다');
+            } else {
+                this.showError('템플릿 로드 실패: ' + result.error);
+            }
+        } catch (error) {
+            console.error('템플릿 로드 오류:', error);
+            this.showError('서버 연결 오류');
+        }
+    }
+    
+    applyTemplateData(templateData) {
+        // 문서 타입 선택
+        if (templateData.document_type) {
+            this.selectDocumentType(templateData.document_type);
+        }
+        
+        // 폼 데이터 적용
+        setTimeout(() => {
+            if (templateData.form_data) {
+                Object.entries(templateData.form_data).forEach(([key, value]) => {
+                    const field = document.querySelector(`[name="${key}"]`);
+                    if (field) {
+                        field.value = value;
+                    }
+                });
+            }
+        }, 500);
+    }
+    
+    showSaveTemplateModal() {
+        // 현재 생성된 문서가 있는지 확인
+        if (this.currentFormData && this.currentFormData.generated_content) {
+            document.getElementById('SaveDocumentCheck').style.display = 'block';
+        }
+        
+        // 저장 탭으로 전환
+        const saveTab = new bootstrap.Tab(document.querySelector('[data-bs-target="#SaveTab"]'));
+        saveTab.show();
+    }
+    
+    async saveNewTemplate() {
+        const name = document.getElementById('TemplateNameInput').value.trim();
+        const description = document.getElementById('TemplateDescriptionInput').value.trim();
+        const saveFormData = document.getElementById('SaveFormDataCheck').checked;
+        const saveGeneratedContent = document.getElementById('SaveGeneratedContentCheck').checked;
+        
+        if (!name) {
+            this.showError('템플릿 이름을 입력해주세요');
+            return;
+        }
+        
+        const templateData = {
+            name: name,
+            description: description,
+            document_type: this.selectedDocumentType,
+            created_at: new Date().toISOString()
+        };
+        
+        if (saveFormData) {
+            templateData.form_data = this.collectFormData();
+        }
+        
+        if (saveGeneratedContent && this.currentFormData) {
+            templateData.generated_content = this.currentFormData.generated_content;
+        }
+        
+        try {
+            const response = await fetch('/api/templates/document/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    data: templateData
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 모달 닫기
+                const modal = bootstrap.Modal.getInstance(document.getElementById('TemplateModal'));
+                modal.hide();
+                
+                // 입력 필드 초기화
+                document.getElementById('TemplateNameInput').value = '';
+                document.getElementById('TemplateDescriptionInput').value = '';
+                
+                this.showSuccess('템플릿이 저장되었습니다');
+            } else {
+                this.showError('템플릿 저장 실패: ' + (result.message || '알 수 없는 오류'));
+            }
+        } catch (error) {
+            console.error('템플릿 저장 오류:', error);
+            this.showError('서버 연결 오류');
+        }
+    }
+    
+    showSuccess(message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.container-fluid').insertBefore(
+            alertDiv, 
+            document.querySelector('.container-fluid').firstChild
+        );
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 3000);
     }
 
     showError(message) {

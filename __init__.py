@@ -4,5 +4,6 @@ ProcureMate GUI 패키지
 """
 
 from .main import app
+from . import deep_research
 
-__all__ = ['app']
+__all__ = ['app', 'deep_research']

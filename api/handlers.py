@@ -10,7 +10,9 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import json
 import sys
+import os
 from pathlib import Path
+import requests
 
 # 상위 디렉토리의 모듈들 import
 project_root = str(Path(__file__).parent.parent.parent)
@@ -784,3 +786,267 @@ def get_doc_generation_handler() -> DocumentGenerationHandler:
     if _doc_generation_handler is None:
         _doc_generation_handler = DocumentGenerationHandler()
     return _doc_generation_handler
+
+class TemplateManager:
+    """템플릿 관리 클래스"""
+    
+    def __init__(self):
+        self.templates_dir = Path("templates")
+        self.documents_dir = self.templates_dir / "documents"
+        self.settings_dir = self.templates_dir / "settings"
+        
+        # 디렉토리 생성
+        self.documents_dir.mkdir(parents=True, exist_ok=True)
+        self.settings_dir.mkdir(parents=True, exist_ok=True)
+    
+    def save_template(self, template_type: str, name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """템플릿 저장"""
+        try:
+            target_dir = self.documents_dir if template_type == "document" else self.settings_dir
+            file_path = target_dir / f"{name}.json"
+            
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"템플릿 저장: {file_path}")
+            return {"success": True, "message": "템플릿이 저장되었습니다"}
+        except Exception as e:
+            logger.error(f"템플릿 저장 실패: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def load_template(self, template_type: str, name: str) -> Dict[str, Any]:
+        """템플릿 로드"""
+        try:
+            target_dir = self.documents_dir if template_type == "document" else self.settings_dir
+            file_path = target_dir / f"{name}.json"
+            
+            if not file_path.exists():
+                return {"success": False, "error": "템플릿을 찾을 수 없습니다"}
+            
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            return {"success": True, "data": data}
+        except Exception as e:
+            logger.error(f"템플릿 로드 실패: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def list_templates(self, template_type: str) -> List[Dict[str, Any]]:
+        """템플릿 목록 조회"""
+        try:
+            target_dir = self.documents_dir if template_type == "document" else self.settings_dir
+            templates = []
+            
+            for file_path in target_dir.glob("*.json"):
+                stat = file_path.stat()
+                templates.append({
+                    "name": file_path.stem,
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "size": stat.st_size
+                })
+            
+            return sorted(templates, key=lambda x: x["modified"], reverse=True)
+        except Exception as e:
+            logger.error(f"템플릿 목록 조회 실패: {e}")
+            return []
+    
+    def delete_template(self, template_type: str, name: str) -> Dict[str, Any]:
+        """템플릿 삭제"""
+        try:
+            target_dir = self.documents_dir if template_type == "document" else self.settings_dir
+            file_path = target_dir / f"{name}.json"
+            
+            if not file_path.exists():
+                return {"success": False, "error": "템플릿을 찾을 수 없습니다"}
+            
+            file_path.unlink()
+            logger.info(f"템플릿 삭제: {file_path}")
+            return {"success": True, "message": "템플릿이 삭제되었습니다"}
+        except Exception as e:
+            logger.error(f"템플릿 삭제 실패: {e}")
+            return {"success": False, "error": str(e)}
+
+class NotionIntegration:
+    """Notion 연동 클래스"""
+    
+    def __init__(self):
+        self.token = os.getenv("NOTION_TOKEN", "")
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28"
+        }
+        self.databases = {
+            "implementation": "1ffb12db772c81d39bf5de3330f69f2e",
+            "dailyProgress": "1ffb12db772c8140867dd336fb6e1c42",
+            "issueTracking": "1ffb12db772c8159a1dee9c530aa5c9c"
+        }
+    
+    def log_implementation_status(self, module_name: str, status: str, progress: int = 0) -> Dict[str, Any]:
+        """구현 상황 로깅"""
+        try:
+            data = {
+                "parent": {"database_id": self.databases["implementation"]},
+                "properties": {
+                    "모듈명": {"title": [{"text": {"content": module_name}}]},
+                    "상태": {"select": {"name": status}},
+                    "진행률": {"number": progress},
+                    "업데이트일시": {"date": {"start": datetime.now().isoformat()}}
+                }
+            }
+            
+            response = requests.post(
+                "https://api.notion.com/v1/pages",
+                headers=self.headers,
+                json=data
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Notion 구현 상황 로깅 성공: {module_name}")
+                return {"success": True}
+            else:
+                logger.error(f"Notion 구현 상황 로깅 실패: {response.text}")
+                return {"success": False, "error": response.text}
+        except Exception as e:
+            logger.error(f"Notion 구현 상황 로깅 오류: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def log_daily_progress(self, date: str, changes: str, next_steps: str) -> Dict[str, Any]:
+        """일일 진행 상황 로깅"""
+        try:
+            data = {
+                "parent": {"database_id": self.databases["dailyProgress"]},
+                "properties": {
+                    "날짜": {"date": {"start": date}},
+                    "변경사항": {"rich_text": [{"text": {"content": changes}}]},
+                    "다음단계": {"rich_text": [{"text": {"content": next_steps}}]}
+                }
+            }
+            
+            response = requests.post(
+                "https://api.notion.com/v1/pages",
+                headers=self.headers,
+                json=data
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Notion 일일 진행 상황 로깅 성공: {date}")
+                return {"success": True}
+            else:
+                logger.error(f"Notion 일일 진행 상황 로깅 실패: {response.text}")
+                return {"success": False, "error": response.text}
+        except Exception as e:
+            logger.error(f"Notion 일일 진행 상황 로깅 오류: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def log_issue(self, title: str, description: str, priority: str = "중간") -> Dict[str, Any]:
+        """이슈 로깅"""
+        try:
+            data = {
+                "parent": {"database_id": self.databases["issueTracking"]},
+                "properties": {
+                    "제목": {"title": [{"text": {"content": title}}]},
+                    "설명": {"rich_text": [{"text": {"content": description}}]},
+                    "우선순위": {"select": {"name": priority}},
+                    "상태": {"select": {"name": "신규"}},
+                    "생성일시": {"date": {"start": datetime.now().isoformat()}}
+                }
+            }
+            
+            response = requests.post(
+                "https://api.notion.com/v1/pages",
+                headers=self.headers,
+                json=data
+            )
+            
+            if response.status_code == 200:
+                logger.info(f"Notion 이슈 로깅 성공: {title}")
+                return {"success": True}
+            else:
+                logger.error(f"Notion 이슈 로깅 실패: {response.text}")
+                return {"success": False, "error": response.text}
+        except Exception as e:
+            logger.error(f"Notion 이슈 로깅 오류: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def test_connection(self) -> Dict[str, Any]:
+        """Notion 연결 테스트"""
+        try:
+            response = requests.get(
+                "https://api.notion.com/v1/users/me",
+                headers=self.headers
+            )
+            
+            if response.status_code == 200:
+                logger.info("Notion 연결 테스트 성공")
+                return {"success": True, "message": "Notion 연결이 정상입니다"}
+            else:
+                logger.error(f"Notion 연결 테스트 실패: {response.text}")
+                return {"success": False, "error": response.text}
+        except Exception as e:
+            logger.error(f"Notion 연결 테스트 오류: {e}")
+            return {"success": False, "error": str(e)}
+
+class TemplateHandler(BaseHandler):
+    """템플릿 관리 핸들러"""
+    
+    def __init__(self):
+        super().__init__()
+        self.template_manager = TemplateManager()
+    
+    async def save_template(self, template_type: str, name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """템플릿 저장"""
+        return self.template_manager.save_template(template_type, name, data)
+    
+    async def load_template(self, template_type: str, name: str) -> Dict[str, Any]:
+        """템플릿 로드"""
+        return self.template_manager.load_template(template_type, name)
+    
+    async def list_templates(self, template_type: str) -> List[Dict[str, Any]]:
+        """템플릿 목록 조회"""
+        return self.template_manager.list_templates(template_type)
+    
+    async def delete_template(self, template_type: str, name: str) -> Dict[str, Any]:
+        """템플릿 삭제"""
+        return self.template_manager.delete_template(template_type, name)
+
+class NotionHandler(BaseHandler):
+    """Notion 연동 핸들러"""
+    
+    def __init__(self):
+        super().__init__()
+        self.notion = NotionIntegration()
+    
+    async def log_implementation_status(self, module_name: str, status: str, progress: int = 0) -> Dict[str, Any]:
+        """구현 상황 로깅"""
+        return self.notion.log_implementation_status(module_name, status, progress)
+    
+    async def log_daily_progress(self, date: str, changes: str, next_steps: str) -> Dict[str, Any]:
+        """일일 진행 상황 로깅"""
+        return self.notion.log_daily_progress(date, changes, next_steps)
+    
+    async def log_issue(self, title: str, description: str, priority: str = "중간") -> Dict[str, Any]:
+        """이슈 로깅"""
+        return self.notion.log_issue(title, description, priority)
+    
+    async def test_connection(self) -> Dict[str, Any]:
+        """Notion 연결 테스트"""
+        return self.notion.test_connection()
+
+# 전역 핸들러 인스턴스들 추가
+_template_handler = None
+_notion_handler = None
+
+def get_template_handler() -> TemplateHandler:
+    """템플릿 핸들러 싱글톤"""
+    global _template_handler
+    if _template_handler is None:
+        _template_handler = TemplateHandler()
+    return _template_handler
+
+def get_notion_handler() -> NotionHandler:
+    """Notion 핸들러 싱글톤"""
+    global _notion_handler
+    if _notion_handler is None:
+        _notion_handler = NotionHandler()
+    return _notion_handler

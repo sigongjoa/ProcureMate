@@ -37,6 +37,16 @@ from .document_generator import (
 )
 # DocumentGenerator는 ProcurementDocumentGenerator의 별칭
 DocumentGenerator = ProcurementDocumentGenerator
+from .deep_research_engine import (
+    DeepResearchResult,
+    ResearchConfig,
+    ResearchDepth,
+    ResearchFocus,
+    DeepResearchEngineFactory
+)
+from .enhanced_document_generator import (
+    EnhancedDocumentGenerator
+)
 from .document_form_generator import (
     DocumentFormField,
     DocumentTemplate,
@@ -75,6 +85,14 @@ __all__ = [
     'ProcurementRequirement',
     'ProcurementDocumentGenerator',
     'DocumentGenerator',
+    
+    # 딥리서치 엔진
+    'DeepResearchResult',
+    'ResearchConfig', 
+    'ResearchDepth',
+    'ResearchFocus',
+    'DeepResearchEngineFactory',
+    'EnhancedDocumentGenerator',
     
     # 문서 폼 생성
     'DocumentFormField',

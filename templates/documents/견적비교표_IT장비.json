@@ -1,0 +1,17 @@
+{
+  "name": "견적비교표_IT장비",
+  "description": "IT 장비 견적 비교용 템플릿",
+  "document_type": "price_comparison",
+  "form_data": {
+    "requester_name": "김개발",
+    "department": "개발팀",
+    "item_name": "개발용 워크스테이션",
+    "quantity": "2",
+    "deadline": "2025-06-30"
+  },
+  "metadata": {
+    "created_at": "2025-05-28T10:00:00",
+    "template_type": "document",
+    "version": "1.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "구매요청서_기본",
+  "description": "기본적인 구매요청서 템플릿",
+  "document_type": "purchase_request",
+  "form_data": {
+    "requester_name": "홍길동",
+    "department": "IT팀",
+    "contact": "010-1234-5678",
+    "purpose": "업무용 장비 구매",
+    "budget": "1000000"
+  },
+  "metadata": {
+    "created_at": "2025-05-28T10:00:00",
+    "template_type": "document",
+    "version": "1.0"
+  }
+}

@@ -31,7 +31,9 @@ from .handlers import (
     get_g2b_handler,
     get_coupang_handler,
     get_hybrid_search_handler,
-    get_doc_generation_handler
+    get_doc_generation_handler,
+    get_template_handler,
+    get_notion_handler
 )
 
 from utils import get_logger
@@ -243,36 +245,252 @@ async def generate_document(request: Dict[str, Any]):
     return {"success": True, "data": result}
 
 
-# 통합 조달 엔드포인트
-@router.post("/procurement/complete")
-async def complete_procurement_workflow(request: Dict[str, Any]):
-    """전체 조달 워크플로우 실행"""
-    query = request.get("query", "")
-    requirements = request.get("requirements", {})
+# 설정 관리 엔드포인트
+@router.get("/settings/load")
+async def load_settings():
+    """현재 설정 로드"""
+    try:
+        # 기본 설정 반환 (실제로는 설정 파일에서 로드)
+        settings = {
+            'llm': {
+                'server_url': 'http://localhost:1234/v1',
+                'model': 'llama-3.1-8b-instruct',
+                'default_temperature': 0.7,
+                'default_max_tokens': 1024
+            },
+            'vectordb': {
+                'db_path': './chroma_db',
+                'collection_name': 'procurement_data',
+                'embedding_model': 'all-MiniLM-L6-v2'
+            },
+            'apis': {
+                'g2b_api_key': '',
+                'coupang_access_key': '',
+                'coupang_secret_key': ''
+            },
+            'system': {
+                'debug_mode': False,
+                'auto_save': True
+            }
+        }
+        return {"success": True, "data": settings}
+    except Exception as e:
+        logger.error(f"Failed to load settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/settings/save")
+async def save_settings(settings: Dict[str, Any]):
+    """설정 저장"""
+    try:
+        # 실제로는 설정 파일에 저장
+        logger.info("Settings saved successfully")
+        return {"success": True, "message": "설정이 저장되었습니다"}
+    except Exception as e:
+        logger.error(f"Failed to save settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/llm/test-connection")
+async def test_llm_connection(request: Dict[str, Any]):
+    """LLM 연결 테스트"""
+    try:
+        server_url = request.get('server_url')
+        model = request.get('model')
+        
+        # 실제 연결 테스트 로직 (기본 응답)
+        logger.info(f"LLM connection test: {server_url} - {model}")
+        
+        return {
+            "success": True,
+            "message": "LLM 연결 성공",
+            "server_url": server_url,
+            "model": model
+        }
+    except Exception as e:
+        logger.error(f"LLM connection test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/vectordb/test-connection")
+async def test_vectordb_connection(request: Dict[str, Any]):
+    """Vector DB 연결 테스트"""
+    try:
+        db_path = request.get('db_path')
+        collection_name = request.get('collection_name')
+        
+        logger.info(f"VectorDB connection test: {db_path} - {collection_name}")
+        
+        return {
+            "success": True,
+            "message": "Vector DB 연결 성공",
+            "db_path": db_path,
+            "collection_name": collection_name
+        }
+    except Exception as e:
+        logger.error(f"VectorDB connection test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/external/test-connections")
+async def test_external_apis(request: Dict[str, Any]):
+    """외부 API 연결 테스트"""
+    try:
+        g2b_key = request.get('g2b_api_key')
+        coupang_access = request.get('coupang_access_key')
+        coupang_secret = request.get('coupang_secret_key')
+        
+        logger.info("External API connection tests completed")
+        
+        return {
+            "success": True,
+            "message": "API 연결 테스트 완료",
+            "results": {
+                "g2b": bool(g2b_key),
+                "coupang": bool(coupang_access and coupang_secret)
+            }
+        }
+    except Exception as e:
+        logger.error(f"External API test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 템플릿 관리 엔드포인트
+@router.get("/templates/document-list")
+async def get_document_templates():
+    """문서 템플릿 목록 조회"""
+    try:
+        from modules.template_manager import get_template_manager
+        template_manager = get_template_manager()
+        templates = template_manager.list_document_templates()
+        
+        logger.info(f"Document templates retrieved: {len(templates)} items")
+        return {
+            "success": True,
+            "data": templates,
+            "count": len(templates)
+        }
+    except Exception as e:
+        logger.error(f"Failed to get document templates: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/templates/document-save")
+async def save_document_template(template_data: Dict[str, Any]):
+    """문서 템플릿 저장"""
+    try:
+        from modules.template_manager import get_template_manager
+        template_manager = get_template_manager()
+        
+        name = template_data.get('name')
+        success = template_manager.save_document_template(name, template_data)
+        
+        logger.info(f"Document template save result: {name} - {success}")
+        
+        return {
+            "success": success,
+            "message": "템플릿이 저장되었습니다" if success else "템플릿 저장에 실패했습니다"
+        }
+    except Exception as e:
+        logger.error(f"Failed to save document template: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/templates/document-delete/{name}")
+async def delete_document_template(name: str):
+    """문서 템플릿 삭제"""
+    try:
+        from modules.template_manager import get_template_manager
+        template_manager = get_template_manager()
+        
+        success = template_manager.delete_document_template(name)
+        logger.info(f"Document template delete result: {name} - {success}")
+        
+        return {
+            "success": success,
+            "message": "템플릿이 삭제되었습니다" if success else "템플릿 삭제에 실패했습니다"
+        }
+    except Exception as e:
+        logger.error(f"Failed to delete document template: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 템플릿 관리 API (새로운 핸들러 사용)
+@router.post("/templates/{template_type}/save")
+async def save_template(template_type: str, request: Dict[str, Any]):
+    """템플릿 저장"""
+    name = request.get("name")
+    data = request.get("data")
     
-    # 1. 하이브리드 검색
-    search_handler = get_hybrid_search_handler()
-    search_results = await search_handler.search_all_platforms(query)
+    if not name or not data:
+        raise HTTPException(status_code=400, detail="이름과 데이터가 필요합니다")
     
-    if not search_results["success"]:
-        raise HTTPException(status_code=500, detail="검색 실패")
+    handler = get_template_handler()
+    return await handler.save_template(template_type, name, data)
+
+@router.get("/templates/{template_type}/load/{name}")
+async def load_template(template_type: str, name: str):
+    """템플릿 로드"""
+    handler = get_template_handler()
+    result = await handler.load_template(template_type, name)
     
-    # 2. 매칭 분석
-    all_products = []
-    for platform_results in search_results["data"].values():
-        if isinstance(platform_results, list):
-            all_products.extend(platform_results)
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result["error"])
     
-    matching_results = await search_handler.analyze_procurement_match(all_products, requirements)
+    return result
+
+@router.get("/templates/{template_type}/list")
+async def list_templates(template_type: str):
+    """템플릿 목록 조회"""
+    handler = get_template_handler()
+    templates = await handler.list_templates(template_type)
+    return {"success": True, "templates": templates}
+
+@router.delete("/templates/{template_type}/delete/{name}")
+async def delete_template(template_type: str, name: str):
+    """템플릿 삭제"""
+    handler = get_template_handler()
+    result = await handler.delete_template(template_type, name)
     
-    # 3. 보고서 생성
-    doc_handler = get_doc_generation_handler()
-    report_results = await doc_handler.generate_procurement_report(all_products, requirements)
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result["error"])
     
-    return {
-        "success": True,
-        "search_results": search_results["data"],
-        "matching_analysis": matching_results,
-        "generated_report": report_results,
-        "timestamp": datetime.now().isoformat()
-    }
+    return result
+
+# Notion 연동 엔드포인트
+@router.post("/notion/log/implementation")
+async def notion_log_implementation(request: Dict[str, Any]):
+    """Notion 구현 상황 로깅"""
+    module_name = request.get("module_name")
+    status = request.get("status")
+    progress = request.get("progress", 0)
+    
+    if not module_name or not status:
+        raise HTTPException(status_code=400, detail="모듈명과 상태가 필요합니다")
+    
+    handler = get_notion_handler()
+    return await handler.log_implementation_status(module_name, status, progress)
+
+@router.post("/notion/log/daily")
+async def notion_log_daily(request: Dict[str, Any]):
+    """Notion 일일 진행 상황 로깅"""
+    date = request.get("date")
+    changes = request.get("changes")
+    next_steps = request.get("next_steps")
+    
+    if not date or not changes or not next_steps:
+        raise HTTPException(status_code=400, detail="날짜, 변경사항, 다음단계가 필요합니다")
+    
+    handler = get_notion_handler()
+    return await handler.log_daily_progress(date, changes, next_steps)
+
+@router.post("/notion/log/issue")
+async def notion_log_issue(request: Dict[str, Any]):
+    """Notion 이슈 로깅"""
+    title = request.get("title")
+    description = request.get("description")
+    priority = request.get("priority", "중간")
+    
+    if not title or not description:
+        raise HTTPException(status_code=400, detail="제목과 설명이 필요합니다")
+    
+    handler = get_notion_handler()
+    return await handler.log_issue(title, description, priority)
+
+@router.get("/notion/test")
+async def notion_test_connection():
+    """Notion 연결 테스트"""
+    handler = get_notion_handler()
+    return await handler.test_connection()

@@ -284,3 +284,18 @@ thumbnails/
 analytics/
 reports/detailed/
 statistics/raw/
+
+# 중첩 git 저장소
+gui/.git/
+modules/.git/
+*/.git/
+
+# 대용량 로그 파일
+*.log.1
+*.log.2
+*.log.old
+log_archive/
+
+# 임시 압축 파일
+*.tmp.zip
+*.backup.tar.gz
