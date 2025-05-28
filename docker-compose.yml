@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # ProcureMate 메인 애플리케이션
+  procuremate-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
+      - LLM_SERVER_URL=http://koalpaca-server:8000
+      - VECTOR_DB_HOST=chroma-db
+    depends_on:
+      - koalpaca-server
+      - chroma-db
+    volumes:
+      - ./output:/app/output
+      - ./chroma_db:/app/chroma_db
+    restart: unless-stopped
+
+  # KoAlpaca LLM 서버
+  koalpaca-server:
+    image: vllm/vllm-openai:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_NAME=beomi/KoAlpaca-Polyglot-5.8B
+      - GPU_MEMORY_UTILIZATION=0.85
+      - MAX_MODEL_LEN=4096
+      - DTYPE=float16
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Chroma 벡터 데이터베이스
+  chroma-db:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./chroma_data:/chroma/chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_PORT=8000
+    restart: unless-stopped
+
+  # Redis (캐싱 및 작업 큐)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  chroma_data:

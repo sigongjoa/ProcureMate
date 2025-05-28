@@ -1,0 +1,13 @@
+{
+  "analyze_procurement_request": "다음 조달 요청을 분석하여 JSON 형태로 응답해주세요.\n\n요청 내용: {user_request}\n\n분석할 항목:\n1. 필요한 물품 목록 (items)\n2. 각 물품의 수량 (quantities)\n3. 긴급도 (urgency: 높음/보통/낮음)\n4. 예산 범위 (budget_range)\n5. 특별 요구사항 (special_requirements)\n\n응답 형식 예시:\n{{\n  \"items\": [\"물품1\", \"물품2\"],\n  \"quantities\": [\"수량1\", \"수량2\"],\n  \"urgency\": \"보통\",\n  \"budget_range\": \"예산 범위\",\n  \"special_requirements\": [\"요구사항1\", \"요구사항2\"]\n}}",
+  
+  "generate_procurement_recommendation": "다음 조달 분석 결과를 바탕으로 구매 추천을 생성해주세요.\n\n필요 물품: {items}\n수량: {quantities}\n긴급도: {urgency}\n예산 범위: {budget_range}\n\n추천 내용:\n1. 구매 우선순위\n2. 예산 최적화 방안\n3. 공급업체 선정 기준\n4. 납기 관리 방안\n5. 품질 확보 방안\n\n한국어로 상세하고 실용적인 추천을 제공해주세요.",
+  
+  "document_generation": "다음 정보를 바탕으로 조달 관련 문서를 생성해주세요.\n\n문서 유형: {document_type}\n조달 내용: {procurement_details}\n\n문서에 포함할 내용:\n1. 조달 목적 및 배경\n2. 조달 사양 및 요구사항\n3. 예산 및 일정\n4. 평가 기준\n5. 계약 조건\n\n전문적이고 체계적인 문서를 작성해주세요.",
+  
+  "price_analysis": "다음 가격 정보를 분석하여 조달 의사결정을 지원해주세요.\n\n상품 정보: {product_info}\n가격 데이터: {price_data}\n시장 조건: {market_conditions}\n\n분석 내용:\n1. 가격 합리성 평가\n2. 시장 가격 대비 분석\n3. 총 소유 비용(TCO) 계산\n4. 가격 협상 포인트\n5. 구매 타이밍 추천\n\n객관적이고 데이터 기반의 분석을 제공해주세요.",
+  
+  "vendor_evaluation": "다음 공급업체 정보를 평가해주세요.\n\n업체 정보: {vendor_info}\n평가 기준: {evaluation_criteria}\n\n평가 항목:\n1. 기술 능력\n2. 품질 관리 체계\n3. 납기 준수 능력\n4. 가격 경쟁력\n5. 사후 서비스\n6. 재무 건전성\n\n각 항목별로 점수와 근거를 제시하고 종합 평가를 해주세요.",
+  
+  "risk_assessment": "다음 조달 계획의 리스크를 분석해주세요.\n\n조달 계획: {procurement_plan}\n환경 요인: {environmental_factors}\n\n리스크 분석:\n1. 공급 리스크\n2. 품질 리스크\n3. 가격 변동 리스크\n4. 납기 지연 리스크\n5. 규제 리스크\n\n각 리스크별로 발생 확률, 영향도, 대응 방안을 제시해주세요."
+}

@@ -1,0 +1,286 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# =============================================================================
+# 프로젝트 특화 설정
+# =============================================================================
+
+# 민감한 설정 파일들
+.env
+.env.local
+.env.production
+config/secrets.py
+config/api_keys.py
+secrets/
+credentials/
+*.key
+*.pem
+*.crt
+
+# 데이터베이스 파일들
+chroma_db/
+*.sqlite3
+*.db
+*.sql
+
+# 모델 파일들 (용량이 큰 ML 모델들)
+models/
+*.bin
+*.pt
+*.h5
+*.pkl
+*.joblib
+*.model
+sentence-transformers/
+
+# 벡터 임베딩 캐시
+embeddings_cache/
+.sentence_transformers_cache/
+
+# 생성된 출력 파일들
+output/
+gui/output/
+exports/
+downloads/
+generated/
+temp/
+tmp/
+
+# 테스트 관련
+test_reports/
+test_results/
+.coverage
+htmlcov/
+
+# 로그 파일들
+logs/
+*.log
+log_*.txt
+debug.log
+error.log
+
+# 개발 도구
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 관련
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 백업 파일들
+*.bak
+*.backup
+*.old
+
+# 임시 파일들
+*.tmp
+*.temp
+.cache/
+
+# API 응답 캐시
+api_cache/
+response_cache/
+
+# 문서 생성 임시 파일들
+*.pdf.tmp
+*.xlsx.tmp
+*.docx.tmp
+
+# 민감한 테스트 데이터
+test_data/real/
+test_data/production/
+sample_data/confidential/
+
+# 설정 파일 백업
+config/*.backup
+config/local_*
+
+# 성능 프로파일링 결과
+profile_results/
+*.prof
+
+# Jupyter 노트북 체크포인트
+.ipynb_checkpoints/
+
+# 개발 중 임시 스크립트
+scratch/
+playground/
+experimental/
+dev_scripts/
+
+# 패키지 매니저 관련
+poetry.lock
+Pipfile.lock
+
+# 브라우저 드라이버 (Selenium 등)
+chromedriver*
+geckodriver*
+msedgedriver*
+
+# 캐시 디렉토리
+.cache/
+__pycache__/
+.pytest_cache/
+
+# 개인 노트 및 문서
+notes/
+personal/
+README_personal.md
+
+# 특정 민감한 모듈들
+modules/config_secret.py
+modules/api_credentials.py
+
+# 실제 조달 데이터 (샘플이 아닌)
+data/production/
+data/real/
+data/confidential/
+
+# 환경별 설정
+.env.development
+.env.staging
+.env.production
+
+# 에러 덤프
+error_dumps/
+crash_reports/
+
+# 메모리 덤프
+*.dmp
+
+# 대용량 미디어 파일
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.wmv
+*.flv
+
+# 압축 파일들 (용량 관련)
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.tar.bz2
+
+# 이미지 캐시
+image_cache/
+thumbnails/
+
+# 통계 및 분석 결과
+analytics/
+reports/detailed/
+statistics/raw/
